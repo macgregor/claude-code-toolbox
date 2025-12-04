@@ -1,0 +1,20 @@
+{
+  "name": "claude-code-toolbox",
+  "version": "1.0.0",
+  "description": "Agents, skills, commands, and MCP servers for productive Claude Code workflows",
+  "author": {
+    "name": "Matthew Stratto"
+  },
+  "homepage": "https://github.com/macgregor/claude-code-toolbox",
+  "repository": "https://github.com/macgregor/claude-code-toolbox",
+  "license": "MIT",
+  "keywords": ["productivity", "workflows", "agents", "skills", "mcp"],
+
+  "agents": [],
+
+  "skills": [],
+
+  "commands": [],
+
+  "mcpServers": {}
+}

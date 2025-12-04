@@ -1,0 +1,9 @@
+.claude/settings.local.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+.cache/
