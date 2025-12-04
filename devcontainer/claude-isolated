@@ -1,0 +1,153 @@
+#!/bin/bash
+#
+# claude-isolated - Launch Claude Code in an isolated container
+#
+# Usage: claude-isolated /path/to/project
+#
+# This script launches a Podman container running Claude Code in an isolated
+# environment. The container has access to:
+# - ~/.claude (configuration and plugins, including claude-code-toolbox)
+# - The specified project directory (mounted to /workspace)
+# - Host network (for VPN and localhost access)
+#
+# Files created by Claude are owned by the host user through UID/GID mapping.
+
+set -euo pipefail
+
+# Constants
+IMAGE_NAME="localhost/claude-isolated:latest"
+VOLUME_NAME="claude-isolated-history"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONTAINERFILE_DIR="${SCRIPT_DIR}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Helper functions
+error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+info() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+warn() {
+    echo -e "${YELLOW}$1${NC}"
+}
+
+# Check for required commands
+if ! command -v podman &> /dev/null; then
+    error "podman is not installed. Please install podman to use claude-isolated."
+fi
+
+# Parse arguments
+REBUILD=false
+PROJECT_PATH=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --rebuild)
+            REBUILD=true
+            shift
+            ;;
+        *)
+            if [ -z "$PROJECT_PATH" ]; then
+                PROJECT_PATH="$1"
+            else
+                error "Usage: claude-isolated [--rebuild] /path/to/project"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Validate project path provided
+if [ -z "$PROJECT_PATH" ]; then
+    error "Usage: claude-isolated [--rebuild] /path/to/project"
+fi
+
+# Validate project path
+if [ ! -d "$PROJECT_PATH" ]; then
+    error "Project path does not exist or is not a directory: $PROJECT_PATH"
+fi
+
+# Convert to absolute path
+PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
+
+# Handle rebuild flag - recreate volume and force rebuild
+if [ "$REBUILD" = true ]; then
+    info "Rebuild requested - recreating volume and rebuilding image"
+
+    if podman volume exists "$VOLUME_NAME" 2>/dev/null; then
+        # Stop any containers using the volume before removing it
+        CONTAINERS=$(podman ps -q --filter volume="$VOLUME_NAME" 2>/dev/null)
+        if [ -n "$CONTAINERS" ]; then
+            info "Stopping containers using volume: $VOLUME_NAME"
+            echo "$CONTAINERS" | xargs podman stop
+        fi
+        podman volume rm "$VOLUME_NAME"
+    fi
+fi
+
+# Build if image doesn't exist or if rebuild requested
+if [ "$REBUILD" = true ] || ! podman image exists "$IMAGE_NAME"; then
+    [ "$REBUILD" = true ] && info "Rebuilding image..." || info "Building image..."
+
+    if podman build \
+        --build-arg HOST_UID="$(id -u)" \
+        --build-arg HOST_GID="$(id -g)" \
+        -t "$IMAGE_NAME" \
+        "$CONTAINERFILE_DIR"; then
+        info "Build successful"
+    else
+        error "Build failed"
+    fi
+fi
+
+# Check if history volume exists
+if ! podman volume exists "$VOLUME_NAME" 2>/dev/null; then
+    info "Creating history volume: $VOLUME_NAME"
+    podman volume create "$VOLUME_NAME"
+fi
+
+# Launch container
+info "Launching isolated Claude Code environment..."
+info "Project: $PROJECT_PATH"
+info "Workspace: /workspace"
+echo ""
+
+# Build mount args conditionally
+MOUNT_ARGS=()
+MOUNT_ARGS+=("-v" "$PROJECT_PATH:/workspace")
+MOUNT_ARGS+=("-v" "$VOLUME_NAME:/commandhistory")
+
+# Mount .claude directory if it exists (for toolbox plugin)
+if [ -d "$HOME/.claude" ]; then
+    MOUNT_ARGS+=("-v" "$HOME/.claude:/home/claude-user/.claude")
+fi
+
+# Mount legacy .claude.json if it exists
+if [ -f "$HOME/.claude.json" ]; then
+    MOUNT_ARGS+=("-v" "$HOME/.claude.json:/home/claude-user/.claude.json")
+fi
+
+# Mount gcloud config if it exists (for Vertex AI)
+if [ -d "$HOME/.config/gcloud" ]; then
+    MOUNT_ARGS+=("-v" "$HOME/.config/gcloud:/home/claude-user/.config/gcloud")
+fi
+
+podman run -it --rm \
+    --network=host \
+    --userns=keep-id \
+    --security-opt label=disable \
+    -e CLAUDE_CODE_USE_VERTEX \
+    -e CLOUD_ML_REGION \
+    -e ANTHROPIC_VERTEX_PROJECT_ID \
+    "${MOUNT_ARGS[@]}" \
+    -w /workspace \
+    "$IMAGE_NAME"

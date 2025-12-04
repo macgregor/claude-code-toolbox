@@ -62,6 +62,25 @@ When you modify agents, skills, commands, hooks, or plugin.json:
 
 Changes take effect immediately without reinstalling or restarting Claude Code.
 
+### (optional) Isolated Development Container
+
+Run Claude Code in an isolated container to limit blast radius when working on projects:
+
+```bash
+claude-isolated /path/to/repo
+
+# youre now inside the devcontainer
+# use claude code as usual
+[claude-user@fedora workspace]$ claude
+
+# or the convenience alias to run claude without permisison checks
+[claude-user@fedora workspace]$ claude-dangerous
+```
+
+If claude-code-toolbox is installed on your local file system, it will be available to claude in the devcontainer.
+
+See [devcontainer documentation](./docs/devcontainer.md) for setup and usage details, including how to integrate with vscode.
+
 ## Development & Customization
 
 ### Adding New Agents, Skills, or Commands

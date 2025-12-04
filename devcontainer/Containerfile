@@ -1,0 +1,75 @@
+# Isolated Claude Code Development Container
+# Base: Red Hat Universal Base Image 9 Minimal
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+# Version pins for cacheable layers
+ARG CLAUDE_CODE_VERSION=2.0.58
+ARG GCLOUD_VERSION=509.0.0
+
+# Install system packages
+RUN microdnf install -y \
+    git \
+    make \
+    wget \
+    jq \
+    vim \
+    nano \
+    python3 \
+    less \
+    procps-ng \
+    sudo \
+    tar \
+    gzip \
+    findutils \
+    shadow-utils \
+    && microdnf clean all
+
+# Install Google Cloud SDK (cacheable - uses version pin)
+ARG GCLOUD_VERSION
+RUN curl -fsSL "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-x86_64.tar.gz" -o /tmp/gcloud.tar.gz && \
+    tar -xzf /tmp/gcloud.tar.gz -C /usr/local && \
+    rm /tmp/gcloud.tar.gz && \
+    /usr/local/google-cloud-sdk/install.sh --quiet --usage-reporting=false --path-update=false && \
+    ln -s /usr/local/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud && \
+    ln -s /usr/local/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
+
+# Download Claude Code installer (cacheable - script rarely changes)
+ARG CLAUDE_CODE_VERSION
+RUN curl -fsSL https://claude.ai/install.sh -o /tmp/install-claude.sh && \
+    chmod +x /tmp/install-claude.sh
+
+# Create claude-user with matching UID/GID from host (declared here to avoid invalidating cache above)
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+RUN groupadd -g ${HOST_GID} claude-user && \
+    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash claude-user && \
+    echo "claude-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Create directory structure as root, then set ownership
+# Note: .claude will be mounted from host, so we don't create it here
+RUN mkdir -p /workspace /commandhistory && \
+    chown -R claude-user:claude-user /workspace /commandhistory
+
+# Switch to claude-user for remaining operations
+USER claude-user
+WORKDIR /home/claude-user
+
+# Install Claude Code as claude-user (uses cached installer script)
+ARG CLAUDE_CODE_VERSION
+RUN bash /tmp/install-claude.sh ${CLAUDE_CODE_VERSION}
+
+# Configure bash history persistence and PATH for gcloud and claude
+RUN echo 'export HISTFILE=/commandhistory/.bash_history' >> /home/claude-user/.bashrc && \
+    echo 'export HISTSIZE=10000' >> /home/claude-user/.bashrc && \
+    echo 'export HISTFILESIZE=10000' >> /home/claude-user/.bashrc && \
+    echo 'shopt -s histappend' >> /home/claude-user/.bashrc && \
+    echo 'PROMPT_COMMAND="history -a"' >> /home/claude-user/.bashrc && \
+    echo 'export PATH=$HOME/.local/bin:/usr/local/google-cloud-sdk/bin:$PATH' >> /home/claude-user/.bashrc && \
+    echo 'export DISABLE_AUTOUPDATER=1' >> /home/claude-user/.bashrc && \
+    echo 'alias claude-dangerous="claude --dangerously-skip-permissions"' >> /home/claude-user/.bashrc
+
+# Set working directory to workspace
+WORKDIR /workspace
+
+# Default command drops to bash shell
+CMD ["/bin/bash"]

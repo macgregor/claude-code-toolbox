@@ -1,0 +1,40 @@
+{
+  "name": "Claude Code Isolated Environment",
+  "build": {
+    "dockerfile": "Containerfile",
+    "args": {
+      "HOST_UID": "${localEnv:UID}",
+      "HOST_GID": "${localEnv:GID}"
+    }
+  },
+  "runArgs": [
+    "--network=host",
+    "--userns=keep-id",
+    "--security-opt=label=disable"
+  ],
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/claude-user/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/home/claude-user/.claude.json,type=bind",
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/claude-user/.config/gcloud,type=bind",
+    "source=claude-isolated-history,target=/commandhistory,type=volume"
+  ],
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "remoteUser": "claude-user",
+  "containerEnv": {
+    "CLAUDE_CODE_USE_VERTEX": "${localEnv:CLAUDE_CODE_USE_VERTEX}",
+    "CLOUD_ML_REGION": "${localEnv:CLOUD_ML_REGION}",
+    "ANTHROPIC_VERTEX_PROJECT_ID": "${localEnv:ANTHROPIC_VERTEX_PROJECT_ID}",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "echo 'Claude Code isolated environment ready. Toolbox plugin available via ~/.claude mount.'",
+  "features": {}
+}

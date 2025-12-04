@@ -1,11 +1,11 @@
 # Isolated Claude Code Development Container
 
 **Date:** 2025-12-04
-**Status:** Design Complete, Pending Implementation
+**Status:** Design Adapted for claude-code-toolbox, Ready for Implementation
 
 ## Overview
 
-This devcontainer configuration runs Claude Code in an isolated filesystem while maintaining host network access. It contains blast radius rather than hardening security—Claude Code affects only explicitly mounted volumes.
+This devcontainer configuration runs Claude Code in an isolated filesystem while maintaining host network access. It contains blast radius rather than hardening security—Claude Code affects only explicitly mounted volumes. The container automatically includes the claude-code-toolbox plugin through the `~/.claude` mount.
 
 ## Problem Statement
 
@@ -14,7 +14,7 @@ Running Claude Code directly on the host with `--dangerously-skip-permissions` l
 - Confines Claude's destructive behavior to specific mounted volumes
 - Reaches VPN and localhost services through host network
 - Delivers a repeatable, clean environment for each session
-- Integrates with existing ~/.claude configuration
+- Integrates with existing ~/.claude configuration (including installed toolbox plugin)
 
 ## Design Decisions
 
@@ -50,7 +50,7 @@ Running Claude Code directly on the host with `--dangerously-skip-permissions` l
 ### Volume Strategy
 
 **Mounted volumes (read/write):**
-1. `~/.claude → /home/claude-user/.claude` - Configuration, skills, agents
+1. `~/.claude → /home/claude-user/.claude` - Configuration, skills, agents, **installed toolbox plugin**
 2. `<project-dir> → /workspace` - Repository being worked on
 3. Named volume for command history - Persists bash history across sessions
 
@@ -71,16 +71,18 @@ Running Claude Code directly on the host with `--dangerously-skip-permissions` l
 ### Directory Structure
 
 ```
-claude/devcontainer/
-├── Dockerfile           # Container image definition
-├── devcontainer.json    # VS Code devcontainer config
-└── claude-isolated      # CLI wrapper script
+claude-code-toolbox/
+├── devcontainer/
+│   ├── Dockerfile           # Container image definition
+│   ├── devcontainer.json    # VS Code devcontainer config
+│   └── claude-isolated      # CLI wrapper script
+└── docs/
+    ├── plans/
+    │   └── 2025-12-04-devcontainer-design-adapted.md  # This document
+    └── devcontainer.md      # Detailed usage guide
 ```
 
-Documentation:
-- `docs/plans/2025-12-04-devcontainer-design.md` (this document)
-- `docs/devcontainer.md` (detailed usage guide)
-- `claude/README.md` (quick start section)
+Main README updated with quick start section.
 
 ### CLI Usage Flow
 
@@ -90,21 +92,21 @@ Documentation:
 4. Script creates history volume if absent
 5. Podman launches container with:
    - Host network
-   - ~/.claude mounted
+   - ~/.claude mounted (includes toolbox plugin)
    - Project directory mounted to /workspace
    - History volume mounted
    - Interactive terminal
    - Auto-remove on exit
 6. Shell opens at /workspace
-7. User runs `claude` commands
+7. User runs `claude` commands (toolbox agents/skills/commands available)
 
 ### VS Code Usage Flow
 
 1. Open project in VS Code
 2. Command Palette → "Dev Containers: Reopen in Container"
-3. Browse to `~/.claude/devcontainer/devcontainer.json`
+3. Browse to `~/.claude/plugins/claude-code-toolbox/devcontainer/devcontainer.json`
 4. VS Code builds and launches container
-5. Work normally, Claude Code available in integrated terminal
+5. Work normally, Claude Code + toolbox available in integrated terminal
 
 ## Component Specifications
 
@@ -131,8 +133,8 @@ Documentation:
 
 ### CLI Wrapper Script (claude-isolated)
 
-**Location:** `claude/devcontainer/claude-isolated`
-**Symlink:** `~/.local/bin/claude-isolated`
+**Location:** `devcontainer/claude-isolated`
+**Symlink:** `~/.local/bin/claude-isolated` (user creates during setup)
 
 **Arguments:**
 - `$1` - Required: Path to project directory
@@ -158,7 +160,7 @@ Documentation:
 
 ### VS Code devcontainer.json
 
-**Location:** `claude/devcontainer/devcontainer.json`
+**Location:** `devcontainer/devcontainer.json`
 
 **Key configuration:**
 - `build.dockerfile`: Points to Dockerfile
@@ -172,7 +174,7 @@ Documentation:
 ## What Persists vs. What's Ephemeral
 
 ### Persists (survives container removal)
-- ~/.claude configuration (host mount)
+- ~/.claude configuration (host mount) - includes toolbox plugin
 - Project files (host mount)
 - Bash history (named volume)
 
@@ -189,33 +191,46 @@ Documentation:
 **Sections:**
 1. **Introduction** - Why use isolated container
 2. **Quick Start** - CLI and VS Code usage examples
-3. **How It Works** - Architecture overview
+3. **How It Works** - Architecture overview, toolbox plugin integration
 4. **Advanced Usage** - Rebuilding image, version pinning
 5. **Troubleshooting** - Common issues and solutions
 
-### claude/README.md Addition
+### README.md Addition
 
 Add section:
 ```markdown
 ## Isolated Development Container
 
-Run Claude Code in an isolated container to limit blast radius:
+Run Claude Code in an isolated container to limit blast radius when working on projects:
 
 ```bash
 claude-isolated /path/to/repo
 ```
 
-See [devcontainer documentation](../docs/devcontainer.md) for details.
+The container includes Claude Code with this toolbox plugin pre-loaded. See [devcontainer documentation](./docs/devcontainer.md) for setup and usage details.
 ```
 
 ## Installation & Setup
 
 After implementation:
 
-1. Ensure `~/.local/bin` is in PATH
-2. Create symlink: `ln -s ~/.claude/devcontainer/claude-isolated ~/.local/bin/claude-isolated`
-3. First invocation builds the image (may take a few minutes)
-4. Subsequent launches are fast
+1. Clone this repo and install the plugin:
+   ```bash
+   git clone https://github.com/macgregor/claude-code-toolbox.git
+   cd claude-code-toolbox
+   claude plugin install .
+   ```
+
+2. Create symlink for CLI wrapper:
+   ```bash
+   ln -s $(pwd)/devcontainer/claude-isolated ~/.local/bin/claude-isolated
+   ```
+
+3. Ensure `~/.local/bin` is in PATH
+
+4. First invocation builds the image (may take a few minutes)
+
+5. Subsequent launches are fast
 
 ## Testing Plan
 
@@ -229,12 +244,13 @@ After implementation:
 - Launch container and verify mounts
 - Verify file ownership matches host
 - Verify Claude Code is accessible and functional
+- Verify toolbox plugin is available (agents, skills, commands work)
 - Verify host network access (can reach VPN resources)
 - Verify bash history persists across sessions
 
 ### End-to-End Tests
-- Complete workflow: launch container, run claude commands, modify files, verify changes on host
-- VS Code: Open in container, use Claude Code, verify functionality
+- Complete workflow: launch container, run claude commands with toolbox skills/agents, modify files, verify changes on host
+- VS Code: Open in container, use Claude Code with toolbox, verify functionality
 - Multi-project: Use same container image with different projects
 
 ## Future Enhancements
@@ -256,6 +272,7 @@ After implementation:
 - Transparent file ownership
 - Full network access
 - Repeatable environment
+- Toolbox plugin automatically available
 
 **Trade-offs accepted:**
 - Security isolation omitted by design
@@ -271,9 +288,10 @@ Implementation succeeds when:
 2. Host user owns files created by Claude
 3. Claude Code reaches VPN resources through host network
 4. Bash history persists across sessions
-5. VS Code integration works with devcontainer.json
-6. Container affects only mounted volumes
-7. Documentation enables understanding and troubleshooting
+5. Toolbox plugin agents/skills/commands are available in container
+6. VS Code integration works with devcontainer.json
+7. Container affects only mounted volumes
+8. Documentation enables understanding and troubleshooting
 
 ## References
 
