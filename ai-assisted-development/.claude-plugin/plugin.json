@@ -1,0 +1,18 @@
+{
+  "name": "ai-assisted-development",
+  "version": "1.0.0",
+  "description": "Agents, skills, and commands for AI-assisted development workflows",
+  "author": {
+    "name": "Matthew Stratto"
+  },
+  "homepage": "https://github.com/macgregor/claude-code-toolbox",
+  "repository": "https://github.com/macgregor/claude-code-toolbox",
+  "license": "MIT",
+  "keywords": ["productivity", "workflows", "agents", "skills"],
+
+  "agents": "./agents",
+  "skills": "./skills",
+  "commands": "./commands",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": {}
+}

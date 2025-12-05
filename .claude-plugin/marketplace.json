@@ -1,0 +1,19 @@
+{
+  "name": "claude-code-toolbox",
+  "owner": {
+    "name": "Matthew Stratto"
+  },
+  "plugins": [
+    {
+      "name": "ai-assisted-development",
+      "source": "./ai-assisted-development",
+      "description": "Agents, skills, and commands for AI-assisted development workflows",
+      "version": "1.0.0",
+      "category": "productivity",
+      "keywords": ["productivity", "workflows", "agents", "skills"],
+      "author": {
+        "name": "Matthew Stratto"
+      }
+    }
+  ]
+}
