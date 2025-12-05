@@ -1,7 +1,7 @@
 ---
 name: web-research
 description: Use for web-based research on best practices, documentation, and code examples - produces structured reports for decision-making. Don't use for local codebase analysis
-allowed-tools: WebSearch, WebFetch, Read, Write
+allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash
 ---
 
 # Web Research Skill
@@ -9,63 +9,159 @@ allowed-tools: WebSearch, WebFetch, Read, Write
 ## Overview
 Conducts web-based research to gather best practices, documentation, and examples. Produces structured markdown reports with standardized metadata for decision-making and future reference.
 
-## Process
+Uses a template-copy workflow with explicit validation to ensure reliable, deterministic output.
 
-This is a multi-stage workflow with quality gates. You MUST complete each stage before proceeding to the next.
+## Complete Workflow
 
-### STAGE 1: INITIALIZE (MANDATORY - DO NOT SKIP)
+Follow these steps in order. Do not skip steps.
 
-**YOU MUST COMPLETE THIS STAGE FIRST**
+### Step 1: Copy Template
 
-1. Use the Read tool to read the template file at `ai-assisted-development/skills/web-research/templates/web-research-report.md`
-2. Extract and preserve these CRITICAL values from the template:
-   - **agent-type identifier**: Look for the line `- **agent-type**: web-research-agent-v1-7k9p3x2m`
-   - **File path pattern**: `docs/research/YYYY-MM-DD-<topic>.md`
-   - **Required sections**: Note all section headers (## and ###)
-3. Understand the research objective clearly
+**Action:** Copy the template to target location
 
-**Quality Gate**: You cannot proceed to Stage 2 without reading the template and capturing the agent-type identifier. If you skip this step, the validation hook will not recognize your report and will not provide feedback.
+1. Determine the output filename:
+   - Use today's date in YYYY-MM-DD format
+   - Create a topic slug from the research objective (lowercase, hyphens, brief)
+   - Format: `docs/research/YYYY-MM-DD-<topic-slug>.md`
+   - Example: `docs/research/2025-12-05-agentic-coding-patterns.md`
 
-### STAGE 2: WEB RESEARCH
+2. Copy template to target location:
+   - Source: `./templates/web-research-report.md`
+   - Destination: `docs/research/YYYY-MM-DD-<topic-slug>.md`
+   - Use the Bash tool: `cp ./templates/web-research-report.md docs/research/YYYY-MM-DD-<topic-slug>.md`
 
-Execute web research efficiently:
+3. Verify the copy succeeded (file exists at target location)
+
+**Quality Gate:** File must exist at correct location before proceeding. Path pattern is critical for validation later.
+
+### Step 2: Conduct Web Research
+
+**Action:** Gather high-quality sources efficiently
+
+Research strategy:
 - Use WebSearch to find official docs, recent articles, best practices
-- Use WebFetch to read specific URLs (documentation pages, READMEs)
+- Use WebFetch to read specific documentation pages, READMEs
 - For repositories: Focus on README, main documentation, example code only
 - DO NOT attempt deep codebase analysis or local file exploration
+
+Source organization:
+- Official Documentation (vendor docs, official guides)
+- Source Code Repositories (GitHub/GitLab projects)
+- Community/Third-party (blog posts, tutorials, Stack Overflow)
+
+For each source, capture:
+- **Source**: Title (not URL, that goes on next line)
+- **URL**: Full URL on dedicated line
+- **Author**: Person/organization/vendor
+- **Date**: Last updated/published date
+- **Activity**: Stars + last commit for repos, N/A for docs
+- **Key points**: Bulleted list of important findings
 
 Efficiency guidelines:
 - Work efficiently - comprehensive but not exhaustive
 - Target 5-10 high-quality sources per category
 - Stop when sufficient information gathered for decision-making
+- Quality over quantity
 
-### STAGE 3: ORGANIZE FINDINGS
+### Step 3: Fill Template via Edit
 
-Group findings by source type using standardized metadata:
-- Official Documentation
-- Source Code Repositories
-- Community/Third-party
+**Action:** Replace all `[REQUIRED: ...]` placeholders with actual content
 
-For each source, capture:
-- **Source**: [Title] - [URL]
-- **Author**: [Person/organization]
-- **Date**: [Last updated/published]
-- **Activity**: [Stars/commits for repos, N/A for docs]
-- **Key points**: [Bullets]
+Use the Edit tool to replace placeholders in the copied file:
 
-### STAGE 4: WRITE REPORT
+1. **Title and Objective:**
+   - Replace `[REQUIRED: Topic]` with actual research topic
+   - Replace `[REQUIRED: The research goal as provided]` with the provided objective
 
-1. Fill all template sections
-2. Save to `docs/research/YYYY-MM-DD-<topic-slug>.md` where:
-   - YYYY-MM-DD is today's date
-   - <topic-slug> is a brief hyphenated description of the research topic
-3. CRITICAL: Include the EXACT agent-type identifier you extracted in Stage 1: `**agent-type**: web-research-agent-v1-7k9p3x2m`
-4. Ensure all required sections from the template are present
+2. **Executive Summary:**
+   - Replace `[REQUIRED: 2-3 paragraph overview of key findings]` with synthesis of findings
+   - Should be 2-3 paragraphs summarizing key insights
 
-**Quality Gate**: After writing, a validation hook will check:
-- File path matches `docs/research/YYYY-MM-DD-*.md`
-- All required sections are present
-- The agent-type identifier is correct
-- All metadata fields are complete
+3. **Findings Sections:**
+   - Replace `[REQUIRED: Official sources with standardized metadata...]` with actual official documentation sources
+   - Replace `[REQUIRED: Repository sources with standardized metadata...]` with actual repository sources
+   - Replace `[REQUIRED: Community sources with standardized metadata...]` with actual community sources
+   - Each source must use the standardized metadata format (Source, URL, Author, Date, Activity, Key points)
 
-If validation fails, you will receive an error message. Fix the issues and retry.
+4. **Sources List:**
+   - Replace `[REQUIRED: Complete list of all URLs/documents consulted]` with bullet list of all URLs
+
+5. **Metadata:**
+   - Replace `[REQUIRED: ISO 8601 timestamp]` with current timestamp (format: YYYY-MM-DDTHH:MM:SSZ)
+   - Replace `[REQUIRED: Comma-separated list of search queries used]` with actual queries you used
+   - Replace `[REQUIRED: Model identifier]` with your model identifier (e.g., claude-sonnet-4-5@20250929)
+
+**Quality Gate:** All `[REQUIRED: ...]` placeholders must be replaced. Validation will fail if any remain.
+
+### Step 4: Validate Report
+
+**Action:** Run validation script explicitly
+
+1. Run the validation script using Bash tool:
+   ```bash
+   scripts/validate-research-report.sh docs/research/YYYY-MM-DD-<topic-slug>.md
+   ```
+   (Use the actual filename you created in Step 1)
+
+2. Read the validation output:
+   - If validation passes: Script exits 0 and prints "Validation passed: <filepath>"
+   - If validation fails: Script exits non-zero and prints error details
+
+3. Proceed based on validation result:
+   - **If validation passes:** Proceed to Step 5 (Report Success)
+   - **If validation fails:** Proceed to Step 4.1 (Fix and Retry)
+
+### Step 4.1: Fix and Retry (if validation failed)
+
+**Action:** Make one attempt to fix validation errors
+
+1. Read the error output from validation script carefully
+2. Common errors:
+   - Unfilled placeholders: Edit to replace any remaining `[REQUIRED: ...]` markers
+   - Missing sections: Add any missing section headers
+   - Path pattern wrong: This shouldn't happen if you followed Step 1 correctly
+
+3. Make edits to fix the reported errors
+
+4. Re-run validation script:
+   ```bash
+   scripts/validate-research-report.sh docs/research/YYYY-MM-DD-<topic-slug>.md
+   ```
+
+5. Check result:
+   - **If validation passes:** Proceed to Step 5 (Report Success)
+   - **If validation still fails:** Proceed to Step 5 (Report Failure)
+
+**Note:** Only ONE retry attempt. If validation fails twice, report the error rather than looping.
+
+### Step 5: Report Outcome
+
+**Action:** Communicate final result
+
+**If validation passed:**
+- Report success with filepath
+- Example: "Research report completed successfully: docs/research/2025-12-05-agentic-coding-patterns.md"
+
+**If validation failed after retry:**
+- Report failure with error details
+- Include the validation error output
+- Example: "Research report validation failed after retry. Errors: [list errors]. File saved at: docs/research/2025-12-05-agentic-coding-patterns.md"
+
+## Important Notes
+
+- **No hooks:** Validation is an explicit workflow step, not automatic
+- **Template copy first:** Ensures correct file location from the start
+- **Edit to fill:** Use Edit tool to replace placeholders, not Write (Write would overwrite entire file)
+- **Single retry:** Bounded token usage, prevents infinite loops
+- **Path pattern critical:** Validation script checks for `docs/research/YYYY-MM-DD-*.md` pattern
+- **Placeholders must be replaced:** Validation fails if any `[REQUIRED: ...]` markers remain
+
+## Example Workflow
+
+1. Copy: `cp ./templates/web-research-report.md docs/research/2025-12-05-claude-agents.md`
+2. Research: WebSearch/WebFetch to gather sources
+3. Edit: Replace `[REQUIRED: Topic]` with "Claude Agents", etc.
+4. Validate: `scripts/validate-research-report.sh docs/research/2025-12-05-claude-agents.md`
+5. If pass: Report success
+6. If fail: Fix errors, validate again
+7. Report final outcome

@@ -1,29 +1,41 @@
 #!/bin/bash
 # Validates web research reports
-# Called by PostToolUse Write hook
+# Called explicitly by web-research skill as workflow step
+# Usage: validate-research-report.sh <filepath>
 
-FILEPATH="$1"
+set -euo pipefail
+
+# Check argument
+if [ $# -ne 1 ]; then
+  echo "ERROR: Usage: validate-research-report.sh <filepath>" >&2
+  exit 1
+fi
+
+FILE_PATH="$1"
 
 # Check if file exists
-if [ ! -f "$FILEPATH" ]; then
-  exit 0
+if [ ! -f "$FILE_PATH" ]; then
+  echo "ERROR: File not found: $FILE_PATH" >&2
+  exit 1
 fi
 
-# Check for unique identifier
-if ! grep -q "agent-type.*web-research-agent-v1-7k9p3x2m" "$FILEPATH"; then
-  # Not a research report, exit silently
-  exit 0
-fi
-
-# It's a research report - validate format
 ERRORS=()
 
-# Check if path matches docs/research/YYYY-MM-DD-*.md
-if [[ ! "$FILEPATH" =~ ^.*/docs/research/[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\.md$ ]]; then
-  ERRORS+=("Path must be docs/research/YYYY-MM-DD-<topic>.md, got: $FILEPATH")
+# Check 1: No unfilled placeholders
+if grep -q '\[REQUIRED:' "$FILE_PATH"; then
+  ERRORS+=("Unfilled placeholders found:")
+  while IFS= read -r line; do
+    ERRORS+=("  - $line")
+  done < <(grep -o '\[REQUIRED:[^]]*\]' "$FILE_PATH")
 fi
 
-# Check required sections
+# Check 2: Path pattern matches docs/research/YYYY-MM-DD-*.md
+if [[ ! "$FILE_PATH" =~ docs/research/[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\.md$ ]]; then
+  ERRORS+=("Path does not match pattern: docs/research/YYYY-MM-DD-*.md")
+  ERRORS+=("  Actual path: $FILE_PATH")
+fi
+
+# Check 3: Required sections exist
 REQUIRED_SECTIONS=(
   "# Research:"
   "## Research Objective"
@@ -37,33 +49,20 @@ REQUIRED_SECTIONS=(
 )
 
 for section in "${REQUIRED_SECTIONS[@]}"; do
-  if ! grep -q "^$section" "$FILEPATH"; then
+  if ! grep -q "^$section" "$FILE_PATH"; then
     ERRORS+=("Missing required section: $section")
-  fi
-done
-
-# Check metadata fields
-METADATA_FIELDS=(
-  "agent-type.*web-research-agent-v1-7k9p3x2m"
-  "Research Date:"
-  "Search Queries:"
-  "Agent Model:"
-)
-
-for field in "${METADATA_FIELDS[@]}"; do
-  if ! grep -q "$field" "$FILEPATH"; then
-    ERRORS+=("Missing metadata field: $field")
   fi
 done
 
 # Report errors if any
 if [ ${#ERRORS[@]} -gt 0 ]; then
-  echo "Research report validation failed:"
+  echo "ERROR: Research report validation failed for: $FILE_PATH" >&2
   for error in "${ERRORS[@]}"; do
-    echo "  - $error"
+    echo "$error" >&2
   done
   exit 1
 fi
 
 # Validation passed
+echo "Validation passed: $FILE_PATH"
 exit 0
