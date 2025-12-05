@@ -24,12 +24,12 @@ Follow these steps in order. Do not skip steps.
 1. Determine the output filename:
    - Use today's date in YYYY-MM-DD format (today is 2025-12-05)
    - Create a topic slug from the research objective (lowercase, hyphens, brief)
-   - Format: `docs/research/YYYY-MM-DD-<topic-slug>.md`
-   - Example: `docs/research/2025-12-05-agentic-coding-patterns.md`
+   - Format: `docs/research/web/YYYY-MM-DD-<topic-slug>.md`
+   - Example: `docs/research/web/2025-12-05-agentic-coding-patterns.md`
 
 2. Copy template to target location:
    - From: `ai-assisted-development/templates/web-research-report.md`
-   - To: `docs/research/YYYY-MM-DD-<topic-slug>.md`
+   - To: `docs/research/web/YYYY-MM-DD-<topic-slug>.md`
 
 3. Verify the copy succeeded (file exists at target location)
 
@@ -118,7 +118,7 @@ Before proceeding to validation, verify:
 - [ ] Each source has all required metadata fields (Source, URL, Author, Date, Activity, Key points)
 - [ ] Sources list contains all URLs mentioned in findings sections
 - [ ] Metadata section has current timestamp and your actual search queries
-- [ ] Filename follows pattern: `docs/research/YYYY-MM-DD-<topic>.md`
+- [ ] Filename follows pattern: `docs/research/web/YYYY-MM-DD-<topic>.md`
 
 If any item is incomplete, fix it now before validation.
 
@@ -130,7 +130,7 @@ If any item is incomplete, fix it now before validation.
 
 1. Run the validation script:
    ```bash
-   ai-assisted-development/scripts/validate-research-report.sh docs/research/YYYY-MM-DD-<topic-slug>.md
+   ai-assisted-development/scripts/validate-research-report.sh docs/research/web/YYYY-MM-DD-<topic-slug>.md
    ```
    (Use the actual filename you created in Step 1)
 
@@ -177,17 +177,17 @@ If any item is incomplete, fix it now before validation.
 
 **If validation passed:**
 - Report success with filepath
-- Example: "Research report completed successfully: docs/research/2025-12-05-agentic-coding-patterns.md"
+- Example: "Research report completed successfully: docs/research/web/2025-12-05-agentic-coding-patterns.md"
 
 **If validation failed after retry:**
 - Report failure with error details
 - Include the validation error output
-- Example: "Research report validation failed after retry. Errors: [list errors]. File saved at: docs/research/2025-12-05-agentic-coding-patterns.md"
+- Example: "Research report validation failed after retry. Errors: [list errors]. File saved at: docs/research/web/2025-12-05-agentic-coding-patterns.md"
 
 ## Important Notes
 
 - **Template copy first:** Ensures correct file location from the start
 - **Fill via Edit:** Replace placeholders using Edit tool, not Write (Write would overwrite entire file)
 - **Single retry:** Bounded token usage, prevents infinite loops
-- **Path pattern critical:** Validation script checks for `docs/research/YYYY-MM-DD-*.md` pattern
+- **Path pattern critical:** Validation script checks for `docs/research/web/YYYY-MM-DD-*.md` pattern
 - **Fail fast for workflow bugs:** Don't retry non-retryable errors

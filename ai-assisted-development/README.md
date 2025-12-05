@@ -20,14 +20,14 @@ This Claude Code plugin provides research agents that gather information and pro
 /web-research Error handling patterns in Rust applications
 ```
 
-**Output Location:** `docs/research/YYYY-MM-DD-<topic-slug>.md`
+**Output Location:** `docs/research/web/YYYY-MM-DD-<topic-slug>.md`
 
 The agent:
 - Conducts comprehensive web searches
 - Fetches and analyzes relevant documentation
 - Synthesizes findings into a structured report
 - Validates the report against template requirements
-- Saves to `docs/research/` with dated filename
+- Saves to `docs/research/web/` with dated filename
 
 ### Codebase Research Agent
 
@@ -46,7 +46,7 @@ The agent:
 /codebase-research /path/to/local/repository
 ```
 
-**Output Location:** `docs/research/YYYY-MM-DD-<repo-name>.md`
+**Output Location:** `docs/research/codebase/YYYY-MM-DD-<repo-name>.md`
 
 The agent:
 - Detects whether input is a URL or filesystem path
@@ -56,7 +56,7 @@ The agent:
 - Extracts architecture patterns, tech stack, integration points
 - Identifies related repositories
 - Validates the report against template requirements
-- Saves to `docs/research/` with dated filename
+- Saves to `docs/research/codebase/` with dated filename
 
 **Analysis Strategy:**
 1. Documentation discovery (README, ARCHITECTURE, docs/)
@@ -67,7 +67,7 @@ The agent:
 
 ## Report Format
 
-Both agents produce markdown reports in `docs/research/` following standardized templates:
+Both agents produce markdown reports in `docs/research/<type>/` following standardized templates:
 - Web research reports: Objective, findings by source, synthesis, key takeaways
 - Codebase analysis reports: Executive summary, tech stack, architecture patterns, integration points
 

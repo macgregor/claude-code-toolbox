@@ -27,12 +27,12 @@ Follow these steps in order. Do not skip steps.
      - If URL (starts with http:// or https://): use last path segment (e.g., "user/repo" → "repo")
      - If path: use basename of the directory
    - Create a slug from repo name (lowercase, hyphens)
-   - Format: `docs/research/YYYY-MM-DD-<repo-slug>.md`
-   - Example: `docs/research/2025-12-05-claude-code.md`
+   - Format: `docs/research/codebase/YYYY-MM-DD-<repo-slug>.md`
+   - Example: `docs/research/codebase/2025-12-05-claude-code.md`
 
 2. Copy template to target location:
    - From: `ai-assisted-development/templates/codebase-analysis-report.md`
-   - To: `docs/research/YYYY-MM-DD-<repo-slug>.md`
+   - To: `docs/research/codebase/YYYY-MM-DD-<repo-slug>.md`
 
 3. Verify the copy succeeded (file exists at target location)
 
@@ -178,7 +178,7 @@ Before proceeding to validation, verify:
 - [ ] Tech stack is bulleted list of names only
 - [ ] Related repositories section has links or "None identified"
 - [ ] Metadata has current timestamp and model identifier
-- [ ] Filename follows pattern: `docs/research/YYYY-MM-DD-<repo-name>.md`
+- [ ] Filename follows pattern: `docs/research/codebase/YYYY-MM-DD-<repo-name>.md`
 
 If any item is incomplete, fix it now before validation.
 
@@ -190,7 +190,7 @@ If any item is incomplete, fix it now before validation.
 
 1. Run the validation script:
    ```bash
-   ai-assisted-development/scripts/validate-codebase-report.sh docs/research/YYYY-MM-DD-<repo-slug>.md
+   ai-assisted-development/scripts/validate-codebase-report.sh docs/research/codebase/YYYY-MM-DD-<repo-slug>.md
    ```
    (Use the actual filename you created in Step 1)
 
@@ -237,19 +237,19 @@ If any item is incomplete, fix it now before validation.
 
 **If validation passed:**
 - Report success with filepath
-- Example: "Codebase analysis completed successfully: docs/research/2025-12-05-claude-code.md"
+- Example: "Codebase analysis completed successfully: docs/research/codebase/2025-12-05-claude-code.md"
 
 **If validation failed after retry:**
 - Report failure with error details
 - Include the validation error output
-- Example: "Codebase analysis validation failed after retry. Errors: [list errors]. File saved at: docs/research/2025-12-05-claude-code.md"
+- Example: "Codebase analysis validation failed after retry. Errors: [list errors]. File saved at: docs/research/codebase/2025-12-05-claude-code.md"
 
 ## Important Notes
 
 - **Template copy first:** Ensures correct file location from the start
 - **Fill via Edit:** Replace placeholders using Edit tool, not Write (Write would overwrite entire file)
 - **Single retry:** Bounded token usage, prevents infinite loops
-- **Path pattern critical:** Validation script checks for `docs/research/YYYY-MM-DD-*.md` pattern
+- **Path pattern critical:** Validation script checks for `docs/research/codebase/YYYY-MM-DD-*.md` pattern
 - **Fail fast for workflow bugs:** Don't retry non-retryable errors
 - **Token efficiency:** Docs first, strategic code reads, stop when sufficient
 - **Progressive disclosure:** Don't read entire codebase, use Grep to find targets
