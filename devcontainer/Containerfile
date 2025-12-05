@@ -45,10 +45,13 @@ RUN groupadd -g ${HOST_GID} claude-user && \
     useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash claude-user && \
     echo "claude-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Copy entrypoint script
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh
+
 # Create directory structure as root, then set ownership
-# Note: .claude will be mounted from host, so we don't create it here
-RUN mkdir -p /workspace /commandhistory && \
-    chown -R claude-user:claude-user /workspace /commandhistory
+RUN mkdir -p /workspace && \
+    chown -R claude-user:claude-user /workspace
 
 # Switch to claude-user for remaining operations
 USER claude-user
@@ -58,9 +61,8 @@ WORKDIR /home/claude-user
 ARG CLAUDE_CODE_VERSION
 RUN bash /tmp/install-claude.sh ${CLAUDE_CODE_VERSION}
 
-# Configure bash history persistence and PATH for gcloud and claude
-RUN echo 'export HISTFILE=/commandhistory/.bash_history' >> /home/claude-user/.bashrc && \
-    echo 'export HISTSIZE=10000' >> /home/claude-user/.bashrc && \
+# Configure bash and PATH
+RUN echo 'export HISTSIZE=10000' >> /home/claude-user/.bashrc && \
     echo 'export HISTFILESIZE=10000' >> /home/claude-user/.bashrc && \
     echo 'shopt -s histappend' >> /home/claude-user/.bashrc && \
     echo 'PROMPT_COMMAND="history -a"' >> /home/claude-user/.bashrc && \
@@ -71,5 +73,6 @@ RUN echo 'export HISTFILE=/commandhistory/.bash_history' >> /home/claude-user/.b
 # Set working directory to workspace
 WORKDIR /workspace
 
-# Default command drops to bash shell
+# Entrypoint handles config linking and plugin setup
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]

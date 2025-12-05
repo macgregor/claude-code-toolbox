@@ -5,20 +5,23 @@
 # Usage: claude-isolated /path/to/project
 #
 # This script launches a Podman container running Claude Code in an isolated
-# environment. The container has access to:
-# - ~/.claude (configuration and plugins, including claude-code-toolbox)
+# environment. The container maintains its own ~/.claude state on a persistent
+# volume, with select localhost configs (CLAUDE.md, skills, agents, etc.)
+# symlinked in via read-only mounts. The container has access to:
+# - Isolated ~/.claude on persistent volume
+# - Select localhost configs via read-only mount and symlinks
 # - The specified project directory (mounted to /workspace)
 # - Host network (for VPN and localhost access)
 #
-# Files created by Claude are owned by the host user through UID/GID mapping.
+# Files created by Claude in /workspace are owned by the host user through UID/GID mapping.
 
 set -euo pipefail
 
 # Constants
 IMAGE_NAME="localhost/claude-isolated:latest"
-VOLUME_NAME="claude-isolated-history"
+VOLUME_NAME="claude-home"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONTAINERFILE_DIR="${SCRIPT_DIR}"
+CONTAINERFILE_DIR="${SCRIPT_DIR}/.."
 
 # Colors for output
 RED='\033[0;31m'
@@ -109,9 +112,9 @@ if [ "$REBUILD" = true ] || ! podman image exists "$IMAGE_NAME"; then
     fi
 fi
 
-# Check if history volume exists
+# Check if home volume exists
 if ! podman volume exists "$VOLUME_NAME" 2>/dev/null; then
-    info "Creating history volume: $VOLUME_NAME"
+    info "Creating home volume: $VOLUME_NAME"
     podman volume create "$VOLUME_NAME"
 fi
 
@@ -121,25 +124,24 @@ info "Project: $PROJECT_PATH"
 info "Workspace: /workspace"
 echo ""
 
-# Build mount args conditionally
+# Build mount args
 MOUNT_ARGS=()
-MOUNT_ARGS+=("-v" "$PROJECT_PATH:/workspace")
-MOUNT_ARGS+=("-v" "$VOLUME_NAME:/commandhistory")
 
-# Mount .claude directory if it exists (for toolbox plugin)
+# Mount home volume (isolated container state)
+MOUNT_ARGS+=("-v" "$VOLUME_NAME:/home/claude-user")
+
+# Mount localhost .claude read-only (source for config sync)
 if [ -d "$HOME/.claude" ]; then
-    MOUNT_ARGS+=("-v" "$HOME/.claude:/home/claude-user/.claude")
+    MOUNT_ARGS+=("-v" "$HOME/.claude:/mnt/localhost-claude:ro")
 fi
 
-# Mount legacy .claude.json if it exists
-if [ -f "$HOME/.claude.json" ]; then
-    MOUNT_ARGS+=("-v" "$HOME/.claude.json:/home/claude-user/.claude.json")
-fi
-
-# Mount gcloud config if it exists (for Vertex AI)
+# Mount gcloud config read-only (for Vertex AI)
 if [ -d "$HOME/.config/gcloud" ]; then
-    MOUNT_ARGS+=("-v" "$HOME/.config/gcloud:/home/claude-user/.config/gcloud")
+    MOUNT_ARGS+=("-v" "$HOME/.config/gcloud:/home/claude-user/.config/gcloud:ro")
 fi
+
+# Mount project directory
+MOUNT_ARGS+=("-v" "$PROJECT_PATH:/workspace")
 
 podman run -it --rm \
     --network=host \

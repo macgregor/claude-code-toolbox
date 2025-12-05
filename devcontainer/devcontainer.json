@@ -13,10 +13,9 @@
     "--security-opt=label=disable"
   ],
   "mounts": [
-    "source=${localEnv:HOME}/.claude,target=/home/claude-user/.claude,type=bind",
-    "source=${localEnv:HOME}/.claude.json,target=/home/claude-user/.claude.json,type=bind",
-    "source=${localEnv:HOME}/.config/gcloud,target=/home/claude-user/.config/gcloud,type=bind",
-    "source=claude-isolated-history,target=/commandhistory,type=volume"
+    "source=claude-home,target=/home/claude-user,type=volume",
+    "source=${localEnv:HOME}/.claude,target=/mnt/localhost-claude,type=bind,readonly",
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/claude-user/.config/gcloud,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
@@ -35,6 +34,6 @@
       }
     }
   },
-  "postCreateCommand": "echo 'Claude Code isolated environment ready. Toolbox plugin available via ~/.claude mount.'",
+  "postCreateCommand": "echo 'Container ready'",
   "features": {}
 }

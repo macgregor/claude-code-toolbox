@@ -1,20 +1,23 @@
 # Isolated Claude Code Development Container
 
 **Date:** 2025-12-04
-**Status:** Design Adapted for claude-code-toolbox, Ready for Implementation
+**Status:** Final Design - Isolated with Selective Config Sync
 
 ## Overview
 
-This devcontainer configuration runs Claude Code in an isolated filesystem while maintaining host network access. It contains blast radius rather than hardening security—Claude Code affects only explicitly mounted volumes. The container automatically includes the claude-code-toolbox plugin through the `~/.claude` mount.
+This devcontainer configuration runs Claude Code in a fully isolated filesystem with selective config sync from localhost. It contains blast radius—Claude Code affects only the workspace directory. The container maintains its own `~/.claude` state on a persistent volume, with select localhost configs (CLAUDE.md, skills, agents, etc.) symlinked in for consistency.
 
 ## Problem Statement
 
-Running Claude Code directly on the host with `--dangerously-skip-permissions` lets Claude modify any file on the system, risking files not under version control. We need isolation that:
+Running Claude Code directly on the host with `--dangerously-skip-permissions` lets Claude modify any file on the system, risking files not under version control. Additionally, sharing localhost's `~/.claude` directory with containers creates path portability issues due to hardcoded absolute paths in plugin metadata and project configurations.
 
-- Confines Claude's destructive behavior to specific mounted volumes
+We need isolation that:
+
+- Confines Claude's destructive behavior to the workspace directory only
+- Maintains isolated `~/.claude` state (disposable, no localhost coupling)
+- Selectively syncs desired localhost configs (CLAUDE.md, skills, agents, etc.)
 - Reaches VPN and localhost services through host network
-- Delivers a repeatable, clean environment for each session
-- Integrates with existing ~/.claude configuration (including installed toolbox plugin)
+- Delivers a repeatable, clean environment with declarative plugin setup
 
 ## Design Decisions
 
@@ -49,14 +52,25 @@ Running Claude Code directly on the host with `--dangerously-skip-permissions` l
 
 ### Volume Strategy
 
-**Mounted volumes (read/write):**
-1. `~/.claude → /home/claude-user/.claude` - Configuration, skills, agents, **installed toolbox plugin**
-2. `<project-dir> → /workspace` - Repository being worked on
-3. Named volume for command history - Persists bash history across sessions
+**Persistent volume:**
+- `claude-home → /home/claude-user` - Isolated container state including `~/.claude`, bash history, all user data
+
+**Read-only mounts from localhost:**
+- `~/.claude → /mnt/localhost-claude:ro` - Source for selective config sync (not used directly by Claude)
+- `~/.config/gcloud → /home/claude-user/.config/gcloud:ro` - GCloud credentials for Vertex AI
+
+**Workspace mount (only writable localhost coupling):**
+- `<project-dir> → /workspace` - Repository being worked on
+
+**Config sync mechanism:**
+- Entrypoint script creates symlinks from container's `~/.claude` → `/mnt/localhost-claude` for select files
+- Synced items: CLAUDE.md, settings.json, skills/, agents/, commands/, hooks/
+- Always fresh (symlinks to read-only mount)
+- Modifiable by editing LINKS array in entrypoint script (requires rebuild)
 
 **Ephemeral:**
 - Everything else in the container is disposable
-- Clean slate on each launch
+- Clean slate on each rebuild
 
 ### Pre-installed Tools
 - git (required for Claude operations)
@@ -73,12 +87,14 @@ Running Claude Code directly on the host with `--dangerously-skip-permissions` l
 ```
 claude-code-toolbox/
 ├── devcontainer/
-│   ├── Dockerfile           # Container image definition
+│   ├── Containerfile        # Container image definition
 │   ├── devcontainer.json    # VS Code devcontainer config
-│   └── claude-isolated      # CLI wrapper script
+│   └── scripts/
+│       ├── claude-isolated  # CLI wrapper script
+│       └── entrypoint.sh    # Container entrypoint (config linking + plugin setup)
 └── docs/
     ├── plans/
-    │   └── 2025-12-04-devcontainer-design-adapted.md  # This document
+    │   └── 2025-12-04-devcontainer-design.md  # This document
     └── devcontainer.md      # Detailed usage guide
 ```
 
@@ -88,36 +104,43 @@ Main README updated with quick start section.
 
 1. User runs: `claude-isolated /path/to/repo`
 2. Script validates path exists
-3. Script builds image if absent (passes HOST_UID/GID)
-4. Script creates history volume if absent
+3. Script builds image if absent (passes HOST_UID/GID, bakes in entrypoint.sh)
+4. Script creates `claude-home` volume if absent
 5. Podman launches container with:
    - Host network
-   - ~/.claude mounted (includes toolbox plugin)
+   - `claude-home` volume mounted at `/home/claude-user`
+   - Localhost `~/.claude` mounted read-only at `/mnt/localhost-claude`
+   - Localhost `~/.config/gcloud` mounted read-only
    - Project directory mounted to /workspace
-   - History volume mounted
    - Interactive terminal
    - Auto-remove on exit
-6. Shell opens at /workspace
-7. User runs `claude` commands (toolbox agents/skills/commands available)
+6. Entrypoint script runs:
+   - Creates symlinks for select localhost configs → container's `~/.claude`
+   - Installs/updates marketplaces (idempotent)
+   - Installs plugins (idempotent)
+7. Shell opens at /workspace
+8. User runs `claude` commands (localhost skills/agents/commands available via symlinks)
 
 ### VS Code Usage Flow
 
 1. Open project in VS Code
 2. Command Palette → "Dev Containers: Reopen in Container"
 3. Browse to `~/.claude/plugins/claude-code-toolbox/devcontainer/devcontainer.json`
-4. VS Code builds and launches container
-5. Work normally, Claude Code + toolbox available in integrated terminal
+4. VS Code builds and launches container (same entrypoint as CLI)
+5. Entrypoint runs automatically (config linking + plugin setup)
+6. Work normally, Claude Code available with localhost skills/agents/commands
 
 ## Component Specifications
 
-### Dockerfile
+### Containerfile
 
 **Base:** `registry.access.redhat.com/ubi9/ubi-minimal:latest`
 
 **Build arguments:**
 - `HOST_UID` - User ID from host
 - `HOST_GID` - Group ID from host
-- `CLAUDE_CODE_VERSION` - Optional version pin (defaults to latest)
+- `CLAUDE_CODE_VERSION` - Version pin (default: 2.0.58)
+- `GCLOUD_VERSION` - GCloud SDK version pin (default: 509.0.0)
 
 **User setup:**
 - Create `claude-user` with matching UID/GID
@@ -126,63 +149,106 @@ Main README updated with quick start section.
 
 **Installation steps:**
 1. Install system packages via microdnf
-2. Create directory structure (/workspace, /commandhistory, ~/.claude)
-3. Install Claude Code via universal installer script
-4. Configure bash history persistence
-5. Set working directory to /workspace
+2. Install Google Cloud SDK
+3. Download Claude Code installer
+4. Create `claude-user` with matching UID/GID
+5. Create `/workspace` directory
+6. Copy `entrypoint.sh` script into image
+7. Switch to `claude-user`
+8. Install Claude Code
+9. Configure bash history and PATH
+10. Set entrypoint to `entrypoint.sh`, default command to bash
 
 ### CLI Wrapper Script (claude-isolated)
 
-**Location:** `devcontainer/claude-isolated`
+**Location:** `devcontainer/scripts/claude-isolated`
 **Symlink:** `~/.local/bin/claude-isolated` (user creates during setup)
 
 **Arguments:**
-- `$1` - Required: Path to project directory
+- `$1` - Required: Path to project directory (defaults to current directory)
 
 **Behavior:**
 1. Validate project path exists and is directory
 2. Check if image exists, build if not:
    - Image name: `localhost/claude-isolated:latest`
    - Pass `--build-arg HOST_UID=$(id -u) --build-arg HOST_GID=$(id -g)`
-3. Check if history volume exists, create if not:
-   - Volume name: `claude-isolated-history`
+   - Build context includes `entrypoint.sh`
+3. Check if volume exists, create if not:
+   - Volume name: `claude-home`
 4. Run podman:
    ```bash
    podman run -it --rm \
      --network=host \
-     -v ~/.claude:/home/claude-user/.claude \
+     --userns=keep-id \
+     --security-opt=label=disable \
+     -v claude-home:/home/claude-user \
+     -v ~/.claude:/mnt/localhost-claude:ro \
+     -v ~/.config/gcloud:/home/claude-user/.config/gcloud:ro \
      -v <project-path>:/workspace \
-     -v claude-isolated-history:/commandhistory \
      -w /workspace \
+     -e CLAUDE_CODE_USE_VERTEX \
+     -e CLOUD_ML_REGION \
+     -e ANTHROPIC_VERTEX_PROJECT_ID \
+     -e DISABLE_AUTOUPDATER=1 \
      localhost/claude-isolated:latest
    ```
-5. Drop to interactive bash shell
+5. Entrypoint runs config linking and plugin setup
+6. Drop to interactive bash shell
 
 ### VS Code devcontainer.json
 
 **Location:** `devcontainer/devcontainer.json`
 
 **Key configuration:**
-- `build.dockerfile`: Points to Dockerfile
-- `build.args`: Pass HOST_UID, HOST_GID
-- `runArgs`: `["--network=host"]`
+- `build.dockerfile`: Points to Containerfile
+- `build.args`: Pass HOST_UID, HOST_GID from environment
+- `runArgs`: `["--network=host", "--userns=keep-id", "--security-opt=label=disable"]`
 - `remoteUser`: `"claude-user"`
 - `workspaceFolder`: `"/workspace"`
-- `mounts`: Array defining ~/.claude, workspace, history volume
-- `customizations.vscode.extensions`: Can add Claude Code extension if desired
+- `mounts`:
+  - `claude-home` volume → `/home/claude-user`
+  - Localhost `~/.claude` → `/mnt/localhost-claude` (read-only)
+  - Localhost `~/.config/gcloud` → `/home/claude-user/.config/gcloud` (read-only)
+- `containerEnv`: Pass Vertex AI environment variables
+- `postCreateCommand`: Simple echo (entrypoint handles setup)
+
+### Entrypoint Script
+
+**Location:** `devcontainer/scripts/entrypoint.sh`
+**Copied into image:** `/usr/local/bin/entrypoint.sh`
+
+**Configuration arrays (modify these to change sync behavior - requires rebuild):**
+- `LINKS`: Files/directories to symlink from localhost (supports globs)
+  - Default: CLAUDE.md, settings.json, skills, agents, commands, hooks
+- `MARKETPLACES`: Git URLs or owner/repo to install
+  - Default: https://github.com/anthropics/claude-code-plugins
+- `PLUGINS`: Plugins to install (name or name@marketplace)
+  - Default: @anthropic/episodic-memory
+
+**Behavior:**
+1. Create symlinks for items in LINKS array from `/mnt/localhost-claude` to `~/.claude`
+   - Supports globs (e.g., "agents/*.md")
+   - Creates parent directories as needed
+   - Skips items that don't exist on localhost
+2. Install/update marketplaces (try add, fallback to update if already exists)
+3. Install plugins (idempotent)
+4. Execute command passed to container (default: bash)
 
 ## What Persists vs. What's Ephemeral
 
 ### Persists (survives container removal)
-- ~/.claude configuration (host mount) - includes toolbox plugin
-- Project files (host mount)
-- Bash history (named volume)
+- Container's `~/.claude` (volume) - isolated plugin state, settings, history
+- Bash history (volume, stored in `/home/claude-user`)
+- Project files (host mount at `/workspace`)
+- Localhost config files (host, read-only mounted)
 
 ### Ephemeral (lost on container removal)
-- Installed packages (beyond what's in image)
-- Temporary files
-- Container home directory contents (except mounted dirs)
-- Any files created outside mounted volumes
+- Nothing - `claude-home` volume persists everything in home directory
+
+### Disposable by Choice
+- Delete `claude-home` volume to reset container state completely
+- Localhost configs remain safe (read-only mounts)
+- Rebuild image to update entrypoint logic or base packages
 
 ## Documentation Plan
 
@@ -223,7 +289,7 @@ After implementation:
 
 2. Create symlink for CLI wrapper:
    ```bash
-   ln -s $(pwd)/devcontainer/claude-isolated ~/.local/bin/claude-isolated
+   ln -s $(pwd)/devcontainer/scripts/claude-isolated ~/.local/bin/claude-isolated
    ```
 
 3. Ensure `~/.local/bin` is in PATH
@@ -232,26 +298,44 @@ After implementation:
 
 5. Subsequent launches are fast
 
+### Customizing Synced Config
+
+To change which localhost files are synced:
+
+1. Edit `devcontainer/scripts/entrypoint.sh`
+2. Modify `LINKS`, `MARKETPLACES`, or `PLUGINS` arrays
+3. Rebuild image: `podman image rm localhost/claude-isolated:latest`
+4. Next launch will rebuild with new configuration
+
 ## Testing Plan
 
 ### Unit Tests
 - Script validates invalid paths correctly
 - Script handles missing image/volume appropriately
 - Script constructs correct podman command
+- Entrypoint creates symlinks correctly for various LINKS patterns
+- Entrypoint handles missing localhost files gracefully
 
 ### Integration Tests
-- Build image successfully
-- Launch container and verify mounts
-- Verify file ownership matches host
+- Build image successfully with entrypoint baked in
+- Launch container and verify volume mounts
+- Verify file ownership matches host in `/workspace`
 - Verify Claude Code is accessible and functional
-- Verify toolbox plugin is available (agents, skills, commands work)
+- Verify localhost configs are symlinked (CLAUDE.md, skills, etc.)
+- Verify localhost configs are read-only (can't modify source)
+- Verify container's `~/.claude` is writable and isolated
+- Verify plugins install successfully on first launch
+- Verify plugins persist on subsequent launches
+- Verify marketplace update works when re-adding existing marketplace
 - Verify host network access (can reach VPN resources)
 - Verify bash history persists across sessions
 
 ### End-to-End Tests
-- Complete workflow: launch container, run claude commands with toolbox skills/agents, modify files, verify changes on host
-- VS Code: Open in container, use Claude Code with toolbox, verify functionality
-- Multi-project: Use same container image with different projects
+- Complete workflow: launch container, run claude commands, use localhost skills/agents, modify files, verify changes on host
+- VS Code: Open in container, verify entrypoint runs, use Claude Code, verify functionality
+- Multi-project: Use same volume with different projects
+- Reset test: Delete `claude-home` volume, verify clean slate on next launch
+- Config change test: Modify LINKS array, rebuild, verify new symlinks
 
 ## Future Enhancements
 
@@ -267,36 +351,62 @@ After implementation:
 ## Trade-offs
 
 **Chosen approach advantages:**
-- Simple, focused implementation
+- True isolation - container can't affect localhost `~/.claude`
+- Disposable state - delete volume to reset completely
+- Selective config sync - only sync what you need
+- Always fresh configs - symlinks to read-only mounts
 - Familiar RHEL tooling
-- Transparent file ownership
+- Transparent file ownership in `/workspace`
 - Full network access
 - Repeatable environment
-- Toolbox plugin automatically available
+- Declarative plugin setup
 
 **Trade-offs accepted:**
-- Security isolation omitted by design
+- Security isolation omitted by design (host network, full VPN access)
 - Podman-only initially
-- Tool updates require image rebuild
-- Startup slightly slower than native (negligible)
+- Changing synced configs requires image rebuild
+- Config changes on localhost visible immediately, but plugin changes need rebuild
+- Startup slightly slower than native (entrypoint runs on every launch)
 - UBI minimal may need additional packages for some projects
+- Localhost symlinks in plugins/ won't work (but plugins/ isn't synced anyway)
 
 ## Success Criteria
 
 Implementation succeeds when:
-1. CLI wrapper launches container with correct mounts
-2. Host user owns files created by Claude
-3. Claude Code reaches VPN resources through host network
-4. Bash history persists across sessions
-5. Toolbox plugin agents/skills/commands are available in container
-6. VS Code integration works with devcontainer.json
-7. Container affects only mounted volumes
-8. Documentation enables understanding and troubleshooting
+1. CLI wrapper launches container with correct volume and mounts
+2. Container's `~/.claude` is isolated on persistent volume
+3. Localhost configs (CLAUDE.md, skills, etc.) are symlinked and readable
+4. Localhost configs cannot be modified from container (read-only enforcement)
+5. Plugins install declaratively on first launch
+6. Plugins persist across container restarts
+7. Host user owns files created by Claude in `/workspace`
+8. Claude Code reaches VPN resources through host network
+9. Bash history persists across sessions
+10. VS Code integration works with devcontainer.json
+11. Container affects only `/workspace` on localhost
+12. Deleting `claude-home` volume resets container state
+13. Documentation enables understanding and troubleshooting
+
+## Design Evolution
+
+**Original approach (discarded):**
+- Mounted localhost `~/.claude` directly into container
+- Shared plugin state between localhost and container
+- Problem: Hardcoded absolute paths in plugin metadata broke across environments
+
+**Final approach (this design):**
+- Container maintains isolated `~/.claude` on persistent volume
+- Selective config sync via read-only mounts and symlinks
+- Declarative plugin installation in container
+- Only `/workspace` couples to localhost filesystem
+
+**Key insight:** Path portability issues with Claude Code's plugin system made sharing `~/.claude` impractical. True isolation is simpler, safer, and more maintainable.
 
 ## References
 
 - [Red Hat Universal Base Images](https://developers.redhat.com/products/rhel/ubi)
 - [UBI Minimal Catalog](https://catalog.redhat.com/en/software/containers/ubi9/ubi-minimal)
 - [Claude Code Native Installation](https://code.claude.com/docs/en/setup)
+- [Claude Code Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
 - [DevContainers Images](https://github.com/devcontainers/images)
 - [DevContainers Specification](https://containers.dev/)

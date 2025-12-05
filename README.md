@@ -1,17 +1,18 @@
 # Claude Code Toolbox
 
-A Claude Code plugin providing agents, skills, commands, and MCP servers for productive development workflows.
+A local marketplace of Claude Code plugins for productive development workflows.
 
 For learning resources see [AI Learning Materials](./docs/ai-learning-material.md)
 
 ## Overview
 
-This plugin provides:
+This marketplace currently includes:
 
-- **Agents**: Code review and analysis agents
-- **Skills**: Workflow skills for planning, brainstorming, git management, and more
-- **Commands**: Slash commands for common workflows
-- **MCP Servers**: Placeholder
+### ai-assisted-development plugin
+
+- **Agents**: Web research agent for gathering technical information
+- **Skills**: Workflow skills for web research and technical investigations
+- **Commands**: Slash commands for research workflows
 - **Hooks**: Automated tasks like episodic memory sync and Chrome debugging setup
 
 ## Installation
@@ -23,22 +24,16 @@ git clone https://github.com/macgregor/claude-code-toolbox.git
 cd claude-code-toolbox
 ```
 
-### Install the Plugin
+### Install via Local Marketplace
 
-**Option A: Install directly**
+Start a Claude Code session and run:
 
-```bash
-claude plugin install .
+```
+/plugin marketplace add /path/to/claude-code-toolbox
+/plugin install ai-assisted-development@claude-code-toolbox
 ```
 
-**Option B: Symlink for easier development**
-
-```bash
-ln -s $(pwd) ~/.claude/plugins/claude-code-toolbox
-claude plugin install ~/.claude/plugins/claude-code-toolbox
-```
-
-Option B is recommended if you plan to customize the plugin, as it allows changes to take effect with just a reload command.
+This approach allows you to iterate on plugin changes easily during development.
 
 ### Optional: Symlink CLAUDE.md
 
@@ -56,11 +51,12 @@ Note: This overwrites any existing `~/.claude/CLAUDE.md`. Back up your current f
 
 When you modify agents, skills, commands, hooks, or plugin.json:
 
-```bash
-/plugin reload claude-code-toolbox
+```
+/plugin uninstall ai-assisted-development@claude-code-toolbox
+/plugin install ai-assisted-development@claude-code-toolbox
 ```
 
-Changes take effect immediately without reinstalling or restarting Claude Code.
+Changes take effect immediately without restarting Claude Code.
 
 ### (optional) Isolated Development Container
 
@@ -83,25 +79,49 @@ See [devcontainer documentation](./docs/devcontainer.md) for setup and usage det
 
 ## Development & Customization
 
+### Repository Structure
+
+```
+.claude-plugin/
+  marketplace.json                    # Marketplace index
+ai-assisted-development/              # Individual plugin
+  .claude-plugin/
+    plugin.json                       # Plugin manifest
+  agents/                             # Custom agents
+  skills/                             # Agent skills
+  commands/                           # Slash commands
+  hooks/
+    hooks.json                        # Hook definitions
+  scripts/                            # Scripts called by hooks
+  templates/                          # Template files
+CLAUDE.md                             # Personal context
+devcontainer/                         # Isolated dev environment
+```
+
 ### Adding New Agents, Skills, or Commands
 
-1. Add your new file to the appropriate directory (`agents/`, `skills/`, or `commands/`)
-2. Update `.claude-plugin/plugin.json` to include the new file path
-3. Reload the plugin: `/plugin reload claude-code-toolbox`
+1. Add your new file to the appropriate directory in `ai-assisted-development/` (`agents/`, `skills/`, or `commands/`)
+2. Reload the plugin:
+   ```
+   /plugin uninstall ai-assisted-development@claude-code-toolbox
+   /plugin install ai-assisted-development@claude-code-toolbox
+   ```
+
+### Creating New Plugins
+
+1. Create a new directory at the repository root (e.g., `my-new-plugin/`)
+2. Add the plugin structure:
+   ```
+   my-new-plugin/
+     .claude-plugin/
+       plugin.json
+     agents/
+     skills/
+     commands/
+   ```
+3. Update `.claude-plugin/marketplace.json` to include the new plugin
+4. Install the new plugin: `/plugin install my-new-plugin@claude-code-toolbox`
 
 ### Customizing CLAUDE.md
 
 The `CLAUDE.md` file contains workflow preferences and instructions for Claude. Edit it to match your personal workflow and coding standards.
-
-### Plugin Structure
-
-```
-.claude-plugin/
-  plugin.json          # Plugin manifest
-agents/                # Custom agents
-skills/                # Agent skills
-hooks/
-  hooks.json          # Hook definitions
-scripts/               # Scripts called by hooks
-CLAUDE.md             # Personal context
-```
