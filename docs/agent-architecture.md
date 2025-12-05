@@ -4,16 +4,16 @@
 
 Each agent uses two components:
 
-**Agent** (complete workflow implementation)
-- Contains all workflow logic and step-by-step instructions
+**Agent** (workflow implementation)
+- Contains workflow logic and instructions
 - Specifies tools in YAML frontmatter
-- Specifies model (sonnet for complex workflows, haiku for simple tasks)
+- Specifies model (sonnet for complex work, haiku for simple)
 - Lives in `agents/<name>.md`
 - Example: `agents/web-research.md`
 
 **Command** (user interface)
 - Launches agent via Task tool
-- Passes user arguments to agent
+- Passes arguments to agent
 - Lives in `commands/<name>.md`
 - Example: `commands/web-research.md`
 
@@ -31,11 +31,11 @@ Results return to user
 
 ## Why Two Layers (Not Three)
 
-**Skill layer removed** - Initial design included a skill layer that agents would invoke via Skill tool, but:
-- Agents cannot reliably invoke skills (Skill tool may not be available to subagents)
-- Skills are auto-invoked by Claude based on description matching, not programmatically
-- Adding indirection adds complexity without benefit
-- Simpler to put workflow logic directly in agent
+Initial design included a skill layer that agents would invoke via Skill tool. We removed it because:
+- Agents cannot reliably invoke skills (Skill tool unavailable to subagents)
+- Claude auto-invokes skills by description matching, not programmatically
+- Indirection adds complexity without benefit
+- Workflow logic belongs in the agent
 
 ## Template-Copy Workflow
 
@@ -47,7 +47,7 @@ For agents that generate documents:
 - Target path uses date-based naming: `YYYY-MM-DD-<topic>.md`
 
 **2. Execute core work**
-- Research, analysis, code generation, etc.
+- Research, analysis, code generation
 - Gather information from tools
 
 **3. Fill template via Edit tool**
@@ -69,20 +69,20 @@ For agents that generate documents:
 ## Why This Pattern Works
 
 **Two layers provide**:
-- Simple, direct invocation chain
-- All workflow logic in one place (easier to maintain)
-- Isolated context per agent execution
-- Clear separation between UI (command) and logic (agent)
+- Direct invocation chain
+- Workflow logic in one place
+- Isolated context per execution
+- Clean separation between UI (command) and logic (agent)
 
 **Template-copy ensures**:
 - Correct file location from start
 - Agent sees structure while editing
-- Validation can be simple (check for markers)
-- Claude follows instructions reliably
+- Simple validation (check for markers)
+- Reliable instruction following
 
 **Explicit validation provides**:
 - Deterministic quality gates
-- Clear error messages for fixing
+- Clear error messages
 - Bounded token usage (single retry)
 - No hook complexity
 
@@ -122,9 +122,9 @@ For new agents:
 - Command: `/ai-assisted-development:web-research <topic>`
 
 **Future Agents**: Apply same pattern
-- Code analysis, test generation, documentation creation
+- Code analysis, test generation, documentation
 - Each follows: copy → work → fill → validate → report
-- All workflow logic contained in agent, not split across skill layer
+- Workflow logic stays in agent
 
 ## Reference
 
