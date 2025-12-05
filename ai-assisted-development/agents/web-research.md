@@ -28,21 +28,22 @@ Follow these steps in order. Do not skip steps.
    - Example: `docs/research/2025-12-05-agentic-coding-patterns.md`
 
 2. Copy template to target location:
-   - Source: `ai-assisted-development/templates/web-research-report.md`
-   - Destination: `docs/research/YYYY-MM-DD-<topic-slug>.md`
-   - Use the Bash tool: `cp ai-assisted-development/templates/web-research-report.md docs/research/YYYY-MM-DD-<topic-slug>.md`
+   - From: `ai-assisted-development/templates/web-research-report.md`
+   - To: `docs/research/YYYY-MM-DD-<topic-slug>.md`
 
 3. Verify the copy succeeded (file exists at target location)
 
 **Quality Gate:** File must exist at correct location before proceeding. Path pattern is critical for validation later.
+
+**Before proceeding:** Confirm the file exists at the target location and verify the filename matches the required pattern.
 
 ### Step 2: Conduct Web Research
 
 **Action:** Gather high-quality sources efficiently
 
 Research strategy:
-- Use WebSearch to find official docs, recent articles, best practices
-- Use WebFetch to read specific documentation pages, READMEs
+- Find official docs, recent articles, best practices
+- Read specific documentation pages, READMEs
 - For repositories: Focus on README, main documentation, example code only
 - DO NOT attempt deep codebase analysis or local file exploration
 
@@ -50,6 +51,16 @@ Source organization:
 - Official Documentation (vendor docs, official guides)
 - Source Code Repositories (GitHub/GitLab projects)
 - Community/Third-party (blog posts, tutorials, Stack Overflow)
+
+Source quality hierarchy (prefer higher tiers):
+1. Official vendor documentation (Anthropic, AWS, OpenAI, etc.)
+2. Academic papers and surveys (arxiv, ACL, peer-reviewed)
+3. Active production repositories (recent commits, many stars, real-world use)
+4. Community articles and tutorials (recent, from recognized experts)
+5. General blog posts and discussions (use sparingly, verify claims)
+
+Recency matters: Prefer 2024-2025 sources over older unless foundational/seminal work.
+Activity matters for repos: Active development (commits in last 3 months) > abandoned projects.
 
 For each source, capture:
 - **Source**: Title (not URL, that goes on next line)
@@ -65,41 +76,59 @@ Efficiency guidelines:
 - Stop when sufficient information gathered for decision-making
 - Quality over quantity
 
-### Step 3: Fill Template via Edit
+**Before proceeding:** Review your sources. Do they answer the core research questions? Do you have coverage across official docs, repos, and community sources?
+
+### Step 3: Fill Template
 
 **Action:** Replace all `[REQUIRED: ...]` placeholders with actual content
 
-Use the Edit tool to replace placeholders in the copied file:
+**CRITICAL:** The template contains placeholders in format `[REQUIRED: description]`. Every single placeholder must be replaced with actual content. Validation will fail if any remain.
+
+Fill the following sections:
 
 1. **Title and Objective:**
-   - Replace `[REQUIRED: Topic]` with actual research topic
-   - Replace `[REQUIRED: The research goal as provided]` with the provided objective
+   - `[REQUIRED: Topic]` → actual research topic
+   - `[REQUIRED: The research goal as provided]` → the provided objective
 
 2. **Executive Summary:**
-   - Replace `[REQUIRED: 2-3 paragraph overview of key findings]` with synthesis of findings
+   - `[REQUIRED: 2-3 paragraph overview of key findings]` → synthesis of findings
    - Should be 2-3 paragraphs summarizing key insights
 
 3. **Findings Sections:**
-   - Replace `[REQUIRED: Official sources with standardized metadata...]` with actual official documentation sources
-   - Replace `[REQUIRED: Repository sources with standardized metadata...]` with actual repository sources
-   - Replace `[REQUIRED: Community sources with standardized metadata...]` with actual community sources
+   - `[REQUIRED: Official sources with standardized metadata...]` → actual official documentation sources
+   - `[REQUIRED: Repository sources with standardized metadata...]` → actual repository sources
+   - `[REQUIRED: Community sources with standardized metadata...]` → actual community sources
    - Each source must use the standardized metadata format (Source, URL, Author, Date, Activity, Key points)
 
 4. **Sources List:**
-   - Replace `[REQUIRED: Complete list of all URLs/documents consulted]` with bullet list of all URLs
+   - `[REQUIRED: Complete list of all URLs/documents consulted]` → bullet list of all URLs
 
 5. **Metadata:**
-   - Replace `[REQUIRED: ISO 8601 timestamp]` with current timestamp (format: YYYY-MM-DDTHH:MM:SSZ)
-   - Replace `[REQUIRED: Comma-separated list of search queries used]` with actual queries you used
-   - Replace `[REQUIRED: Model identifier]` with your model identifier
+   - `[REQUIRED: ISO 8601 timestamp]` → current timestamp (format: YYYY-MM-DDTHH:MM:SSZ)
+   - `[REQUIRED: Comma-separated list of search queries used]` → actual queries you used
+   - `[REQUIRED: Model identifier]` → your model identifier
 
-**Quality Gate:** All `[REQUIRED: ...]` placeholders must be replaced. Validation will fail if any remain.
+### Step 3.1: Self-Review Before Validation
+
+**Action:** Review your work before running validation
+
+Before proceeding to validation, verify:
+- [ ] All `[REQUIRED: ...]` placeholders have been replaced with actual content (see Step 3)
+- [ ] Executive summary is 2-3 paragraphs (not a bulleted list)
+- [ ] Each source has all required metadata fields (Source, URL, Author, Date, Activity, Key points)
+- [ ] Sources list contains all URLs mentioned in findings sections
+- [ ] Metadata section has current timestamp and your actual search queries
+- [ ] Filename follows pattern: `docs/research/YYYY-MM-DD-<topic>.md`
+
+If any item is incomplete, fix it now before validation.
+
+**Before proceeding:** State which checklist items passed and which (if any) you fixed.
 
 ### Step 4: Validate Report
 
 **Action:** Run validation script explicitly
 
-1. Run the validation script using Bash tool:
+1. Run the validation script:
    ```bash
    ai-assisted-development/scripts/validate-research-report.sh docs/research/YYYY-MM-DD-<topic-slug>.md
    ```
@@ -111,30 +140,36 @@ Use the Edit tool to replace placeholders in the copied file:
 
 3. Proceed based on validation result:
    - **If validation passes:** Proceed to Step 5 (Report Success)
-   - **If validation fails:** Proceed to Step 4.1 (Fix and Retry)
+   - **If validation fails:** Proceed to Step 4.1 (Analyze and Fix)
 
-### Step 4.1: Fix and Retry (if validation failed)
+### Step 4.1: Analyze and Fix (if validation failed)
 
-**Action:** Make one attempt to fix validation errors
+**Action:** Categorize error and decide whether to retry
 
-1. Read the error output from validation script carefully
-2. Common errors:
-   - Unfilled placeholders: Edit to replace any remaining `[REQUIRED: ...]` markers
-   - Missing sections: Add any missing section headers
-   - Path pattern wrong: This shouldn't happen if you followed Step 1 correctly
+1. Read the validation error output carefully
 
-3. Make edits to fix the reported errors
+2. Categorize the error:
 
-4. Re-run validation script:
-   ```bash
-   ai-assisted-development/scripts/validate-research-report.sh docs/research/YYYY-MM-DD-<topic-slug>.md
-   ```
+   **Retryable errors** (content issues - fix and retry):
+   - Unfilled placeholders remaining (see Step 3 for requirements)
+   - Missing section content
+   - Incomplete metadata
 
-5. Check result:
-   - **If validation passes:** Proceed to Step 5 (Report Success)
-   - **If validation still fails:** Proceed to Step 5 (Report Failure)
+   **Non-retryable errors** (workflow bugs - fail fast):
+   - Path pattern wrong (indicates Step 1 failure)
+   - Template structure corrupted
+   - File not found
 
-**Note:** Only ONE retry attempt. If validation fails twice, report the error rather than looping.
+3. If error is retryable:
+   - Make edits to fix the reported errors
+   - Re-run validation script
+   - Proceed based on result (pass → Step 5 success, fail → Step 5 failure)
+
+4. If error is non-retryable:
+   - Skip retry, go directly to Step 5 (Report Failure)
+   - Report the workflow bug in your failure message
+
+**Note:** Only ONE retry attempt for retryable errors. If validation fails twice, report the error rather than looping.
 
 ### Step 5: Report Outcome
 
@@ -152,7 +187,7 @@ Use the Edit tool to replace placeholders in the copied file:
 ## Important Notes
 
 - **Template copy first:** Ensures correct file location from the start
-- **Edit to fill:** Use Edit tool to replace placeholders, not Write (Write would overwrite entire file)
+- **Fill via Edit:** Replace placeholders using Edit tool, not Write (Write would overwrite entire file)
 - **Single retry:** Bounded token usage, prevents infinite loops
 - **Path pattern critical:** Validation script checks for `docs/research/YYYY-MM-DD-*.md` pattern
-- **Placeholders must be replaced:** Validation fails if any `[REQUIRED: ...]` markers remain
+- **Fail fast for workflow bugs:** Don't retry non-retryable errors
