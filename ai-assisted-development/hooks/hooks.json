@@ -4,7 +4,7 @@
       "matcher": "Write",
       "hooks": [{
         "type": "command",
-        "command": "scripts/validate-research-report.sh"
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/validate-research-report.sh"
       }]
     }]
   }
