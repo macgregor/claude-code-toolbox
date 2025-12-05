@@ -51,10 +51,21 @@ Don't redesign from scratch without understanding why current approach was chose
 
 ## Devcontainer-Specific Notes
 
+**CRITICAL: The devcontainer is GENERAL-PURPOSE, not specific to this repo.**
+- Can be used for ANY project, not just claude-code-toolbox development
+- DO NOT add repo-specific configuration to devcontainer (Containerfile, entrypoint.sh, etc.)
+- Project-specific hooks/scripts belong in `<repo>/.claude/`, NOT in devcontainer config
+- Public plugins (for general use) CAN be added to entrypoint.sh PLUGINS array
+- THIS repo's marketplace and plugin must be installed manually when working on this repo:
+  ```bash
+  make install-plugin  # Installs marketplace and plugin (idempotent)
+  ```
+
 The devcontainer design evolved to solve path portability issues:
-- Container maintains **isolated** `~/.claude` on persistent volume
-- Selective config sync from localhost via read-only mounts + symlinks
-- Only `/workspace` couples to localhost filesystem
+- Container maintains **isolated** `~/.claude` on persistent volume (includes its own plugins)
+- Localhost `~/.claude` mounted read-only at `/mnt/localhost-claude` for selective config sync
+- Plugins are installed IN THE CONTAINER, not synced from localhost (absolute path issues)
+- `/workspace` in container maps to project directory on localhost
 - See `docs/plans/2025-12-04-devcontainer-design.md` for full rationale
 
 When modifying devcontainer config:

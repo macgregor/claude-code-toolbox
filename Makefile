@@ -5,10 +5,18 @@ validate-plugin:
 
 .PHONY: install-local-marketplace
 install-local-marketplace:
-	claude plugin marketplace add ./
+	@output=$$(claude plugin marketplace add ./ 2>&1) || { \
+		if echo "$$output" | grep -q "Marketplace '.*' is already installed"; then \
+			echo "Marketplace already installed, updating..."; \
+			claude plugin marketplace update claude-code-toolbox; \
+		else \
+			echo "$$output" >&2; \
+			exit 1; \
+		fi; \
+	}
 
-.PHONY: reinstall-plugin
-reinstall-plugin:
+.PHONY: install-plugin
+install-plugin: install-local-marketplace
 	-claude plugin rm ai-assisted-development@claude-code-toolbox
 	claude plugin marketplace update claude-code-toolbox
 	claude plugin install ai-assisted-development@claude-code-toolbox

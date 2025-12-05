@@ -1,5 +1,12 @@
 {
   "hooks": {
+    "PreToolUse": [{
+      "matcher": "*",
+      "hooks": [{
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/debug/pre-tool-use-trace.sh"
+      }]
+    }],
     "PostToolUse": [{
       "matcher": "Write",
       "hooks": [{
