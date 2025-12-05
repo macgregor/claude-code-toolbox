@@ -2,13 +2,13 @@
 
 ## What This Is
 
-Run Claude Code in a container that limits filesystem access to your project directory and `~/.claude` configuration. The container uses host networking for VPN and localhost access but isolates the filesystem.
+Run Claude Code in a container that limits filesystem access to your project directory. The container maintains an isolated `~/.claude` on a persistent volume and syncs select config files from localhost (CLAUDE.md, skills, agents). It uses host networking for VPN and localhost access but isolates the filesystem.
 
 **Provides:**
 - Filesystem isolation (Claude touches only mounted volumes)
 - Full network access (host network mode)
 - Fresh environment each launch
-- Automatic toolbox plugin integration (via `~/.claude` mount)
+- Isolated `~/.claude` on persistent volume with selective localhost config sync
 
 **Does not provide:**
 - Security hardening
@@ -68,7 +68,7 @@ cd claude-code-toolbox
 claude plugin install .
 
 # Create CLI wrapper symlink
-ln -s $(pwd)/devcontainer/claude-isolated ~/.local/bin/claude-isolated
+ln -s $(pwd)/devcontainer/scripts/claude-isolated ~/.local/bin/claude-isolated
 
 # Verify
 which claude-isolated
@@ -101,7 +101,7 @@ claude-isolated /path/to/project
 **Inside the container:**
 - Project at `/workspace`
 - Claude Code available via `claude` command
-- Toolbox agents, skills, commands available
+- Localhost agents, skills, commands available via symlinks
 - Exit with `exit` or Ctrl+D
 
 ### VS Code
@@ -126,12 +126,15 @@ touch ~/.claude.json
 ### Mounts
 
 **Read/write:**
-- `~/.claude` → `/home/claude-user/.claude` (config, plugins, toolbox)
+- `claude-home` → `/home/claude-user` (isolated container state: `~/.claude`, bash history, all user data)
 - `<project-dir>` → `/workspace` (your repository)
-- `claude-isolated-history` → `/commandhistory` (bash history, named volume)
+
+**Read-only:**
+- `~/.claude` → `/mnt/localhost-claude:ro` (source for selective config sync via symlinks)
+- `~/.config/gcloud` → `/home/claude-user/.config/gcloud:ro` (GCloud credentials for Vertex AI)
 
 **Ephemeral:**
-- Everything else resets on container removal
+- Everything else (container state persists on `claude-home` volume)
 
 ### User Mapping
 
