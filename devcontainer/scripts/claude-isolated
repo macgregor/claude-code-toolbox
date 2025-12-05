@@ -82,6 +82,10 @@ fi
 # Convert to absolute path
 PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
 
+# Generate container name from project path
+# Use a sanitized version of the project path as the container name
+CONTAINER_NAME="claude-isolated-$(echo "$PROJECT_PATH" | md5sum | cut -d' ' -f1)"
+
 # Handle rebuild flag - recreate volume and force rebuild
 if [ "$REBUILD" = true ]; then
     info "Rebuild requested - recreating volume and rebuilding image"
@@ -158,6 +162,7 @@ if [ -f "/etc/localtime" ]; then
 fi
 
 podman run -it --rm \
+    --name "$CONTAINER_NAME" \
     --network=host \
     --userns=keep-id \
     --security-opt label=disable \

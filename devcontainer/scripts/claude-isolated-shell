@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# claude-isolated-shell - Attach a shell to a running claude-isolated container
+#
+# Usage: claude-isolated-shell /path/to/project
+#
+# This script attaches an additional bash shell to a running claude-isolated
+# container. This is useful for:
+# - Running monitoring tools (like extract-trace.py)
+# - Debugging while Claude is running
+# - Inspecting container state
+#
+# The container must already be running via claude-isolated.
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Helper functions
+error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+info() {
+    echo -e "${GREEN}$1${NC}"
+}
+
+warn() {
+    echo -e "${YELLOW}$1${NC}"
+}
+
+# Check for required commands
+if ! command -v podman &> /dev/null; then
+    error "podman is not installed. Please install podman to use claude-isolated-shell."
+fi
+
+# Parse arguments
+PROJECT_PATH="$1"
+
+# Validate project path provided
+if [ -z "$PROJECT_PATH" ]; then
+    error "Usage: claude-isolated-shell /path/to/project"
+fi
+
+# Validate project path
+if [ ! -d "$PROJECT_PATH" ]; then
+    error "Project path does not exist or is not a directory: $PROJECT_PATH"
+fi
+
+# Convert to absolute path
+PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
+
+# Generate container name (same logic as claude-isolated)
+CONTAINER_NAME="claude-isolated-$(echo "$PROJECT_PATH" | md5sum | cut -d' ' -f1)"
+
+# Check if container is running
+if ! podman ps --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+    error "No running container found for project: $PROJECT_PATH\nContainer name: $CONTAINER_NAME\nStart it first with: claude-isolated $PROJECT_PATH"
+fi
+
+info "Attaching shell to container: $CONTAINER_NAME"
+info "Project: $PROJECT_PATH"
+echo ""
+
+# Exec into the container with a bash shell
+exec podman exec -it "$CONTAINER_NAME" /bin/bash

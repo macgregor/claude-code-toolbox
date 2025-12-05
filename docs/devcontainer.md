@@ -67,11 +67,13 @@ git clone https://github.com/macgregor/claude-code-toolbox.git
 cd claude-code-toolbox
 claude plugin install .
 
-# Create CLI wrapper symlink
+# Create CLI wrapper symlinks
 ln -s $(pwd)/devcontainer/scripts/claude-isolated ~/.local/bin/claude-isolated
+ln -s $(pwd)/devcontainer/scripts/claude-isolated-shell ~/.local/bin/claude-isolated-shell
 
 # Verify
 which claude-isolated
+which claude-isolated-shell
 ```
 
 ### Configure VS Code for Podman
@@ -103,6 +105,22 @@ claude-isolated /path/to/project
 - Claude Code available via `claude` command
 - Localhost agents, skills, commands available via symlinks
 - Exit with `exit` or Ctrl+D
+
+**Attaching additional shells:**
+
+While Claude is running in one terminal, you can attach additional shells to the same container for monitoring or debugging:
+
+```bash
+# In another terminal
+claude-isolated-shell /path/to/project
+```
+
+This is useful for:
+- Running debug tools like `extract-trace.py` while Claude operates
+- Inspecting container state during execution
+- Running monitoring scripts without interrupting Claude
+
+Both shells share the same container filesystem (including `/tmp`), so debug traces and other temporary files are visible to both.
 
 ### VS Code
 
