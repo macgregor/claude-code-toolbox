@@ -64,6 +64,7 @@ if not root:
 
 # Build set of all UUIDs in trace by following parent chain
 # Stop when we hit another user message (next turn)
+# Tool results have 'toolUseResult' field and are part of the current turn
 trace_uuids = {root['uuid']}
 changed = True
 while changed:
@@ -71,8 +72,9 @@ while changed:
     for msg in messages:
         parent_uuid = msg.get('parentUuid')
         if parent_uuid and parent_uuid in trace_uuids and msg['uuid'] not in trace_uuids:
-            # Stop if this is a user message (marks start of next turn)
-            if msg.get('type') == 'user':
+            # Stop if this is a user message starting a new turn
+            # Messages with 'toolUseResult' are tool results, not new turns
+            if msg.get('type') == 'user' and 'toolUseResult' not in msg:
                 continue
             trace_uuids.add(msg['uuid'])
             changed = True
