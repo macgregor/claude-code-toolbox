@@ -8,7 +8,6 @@ export PATH="$HOME/.local/bin:$PATH"
 # Supports globs (e.g., "agents/*.md")
 LINKS=(
   "CLAUDE.md"
-  "settings.json"
   "skills"
   "agents"
   "commands"

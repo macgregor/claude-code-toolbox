@@ -10,7 +10,7 @@
   "license": "MIT",
   "keywords": ["productivity", "workflows", "agents", "skills"],
 
-  "agents": "./agents",
+  "agents": ["./agents/web-research.md"],
   "skills": "./skills",
   "commands": "./commands",
   "hooks": "./hooks/hooks.json",

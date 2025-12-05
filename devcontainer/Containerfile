@@ -45,10 +45,6 @@ RUN groupadd -g ${HOST_GID} claude-user && \
     useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/bash claude-user && \
     echo "claude-user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Copy entrypoint script
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod 755 /usr/local/bin/entrypoint.sh
-
 # Create directory structure as root, then set ownership
 RUN mkdir -p /workspace && \
     chown -R claude-user:claude-user /workspace
@@ -69,6 +65,12 @@ RUN echo 'export HISTSIZE=10000' >> /home/claude-user/.bashrc && \
     echo 'export PATH=$HOME/.local/bin:/usr/local/google-cloud-sdk/bin:$PATH' >> /home/claude-user/.bashrc && \
     echo 'export DISABLE_AUTOUPDATER=1' >> /home/claude-user/.bashrc && \
     echo 'alias claude-dangerous="claude --dangerously-skip-permissions"' >> /home/claude-user/.bashrc
+
+# Copy entrypoint script (done late to avoid invalidating Claude Code installation cache)
+USER root
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh
+USER claude-user
 
 # Set working directory to workspace
 WORKDIR /workspace
