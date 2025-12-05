@@ -26,24 +26,44 @@ cd claude-code-toolbox
 
 ### Install via Local Marketplace
 
-Start a Claude Code session and run:
+From the repository directory, run:
 
-```
-/plugin marketplace add /path/to/claude-code-toolbox
-/plugin install ai-assisted-development@claude-code-toolbox
+```bash
+make install-plugin
 ```
 
-This approach allows you to iterate on plugin changes easily during development.
+This command is idempotent and handles both marketplace and plugin installation, allowing you to iterate on plugin changes easily during development.
 
 ## Usage
+
+### Debug Mode
+
+Enable trace logging and version info by setting `CLAUDE_TOOLBOX_DEBUG=1`:
+
+```json
+// .claude/settings.json
+// .claude/settings.local.json
+{
+  "env": {
+    "CLAUDE_TOOLBOX_DEBUG": "1"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "ai-assisted-development/scripts/debug/statusline.sh"
+  }
+}
+```
+
+The statusline displays plugin version, current trace ID, and an extraction command. Copy the command to extract full conversation logs for debugging agent behavior.
+
+See [Plugin Debug System](./docs/plugin-debug-system.md) for details.
 
 ### Reloading After Changes
 
 When you modify agents, skills, commands, hooks, or plugin.json:
 
-```
-/plugin uninstall ai-assisted-development@claude-code-toolbox
-/plugin install ai-assisted-development@claude-code-toolbox
+```bash
+make install-plugin
 ```
 
 Changes take effect immediately without restarting Claude Code.
@@ -92,9 +112,8 @@ devcontainer/                         # Isolated dev environment
 
 1. Add your new file to the appropriate directory in `ai-assisted-development/` (`agents/`, `skills/`, or `commands/`)
 2. Reload the plugin:
-   ```
-   /plugin uninstall ai-assisted-development@claude-code-toolbox
-   /plugin install ai-assisted-development@claude-code-toolbox
+   ```bash
+   make install-plugin
    ```
 
 ### Creating New Plugins
@@ -110,7 +129,7 @@ devcontainer/                         # Isolated dev environment
      commands/
    ```
 3. Update `.claude-plugin/marketplace.json` to include the new plugin
-4. Install the new plugin: `/plugin install my-new-plugin@claude-code-toolbox`
+4. Reload the marketplace and install: `make install-plugin` (or `/plugin install my-new-plugin@claude-code-toolbox` for just the new plugin)
 
 ### Customizing CLAUDE.md
 
