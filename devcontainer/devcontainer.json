@@ -15,7 +15,9 @@
   "mounts": [
     "source=claude-home,target=/home/claude-user,type=volume",
     "source=${localEnv:HOME}/.claude,target=/mnt/localhost-claude,type=bind,readonly",
-    "source=${localEnv:HOME}/.config/gcloud,target=/home/claude-user/.config/gcloud,type=bind,readonly"
+    "source=${localEnv:HOME}/.config/gcloud,target=/home/claude-user/.config/gcloud,type=bind,readonly",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/claude-user/.gitconfig,type=bind,readonly",
+    "source=${localEnv:HOME}/.gitconfig.local,target=/home/claude-user/.gitconfig.local,type=bind,readonly"
   ],
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",

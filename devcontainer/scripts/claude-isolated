@@ -140,6 +140,15 @@ if [ -d "$HOME/.config/gcloud" ]; then
     MOUNT_ARGS+=("-v" "$HOME/.config/gcloud:/home/claude-user/.config/gcloud:ro")
 fi
 
+# Mount git config read-only
+if [ -f "$HOME/.gitconfig" ]; then
+    MOUNT_ARGS+=("-v" "$HOME/.gitconfig:/home/claude-user/.gitconfig:ro")
+fi
+
+if [ -f "$HOME/.gitconfig.local" ]; then
+    MOUNT_ARGS+=("-v" "$HOME/.gitconfig.local:/home/claude-user/.gitconfig.local:ro")
+fi
+
 # Mount project directory
 MOUNT_ARGS+=("-v" "$PROJECT_PATH:/workspace")
 
