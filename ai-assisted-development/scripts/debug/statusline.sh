@@ -24,16 +24,21 @@ if [ -n "$SESSION_ID" ]; then
 fi
 
 # Build status line
-if [ -n "$TRACE_ID" ]; then
-  # Build extraction command with absolute path
-  EXTRACT_SCRIPT="$INSTALL_PATH/scripts/debug/extract-trace.py"
-  # Abbreviate home directory for display
-  EXTRACT_DISPLAY="${EXTRACT_SCRIPT/#$HOME/\~}"
-
-  # Show version + trace info
-  echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | Trace: ${TRACE_ID:0:8}"
-  echo "$EXTRACT_DISPLAY ${TRACE_ID:0:8}"
+if [ -z "$VERSION" ] || [ "$VERSION" = "unknown" ] || [ -z "$INSTALL_PATH" ]; then
+  # Plugin not installed
+  echo "${PLUGIN_ID}: ⚠️  Plugin not installed."
 else
-  # Just show version
-  echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | Debug mode active"
+  if [ -n "$TRACE_ID" ]; then
+    # Build extraction command with absolute path
+    EXTRACT_SCRIPT="$INSTALL_PATH/scripts/debug/extract-trace.py"
+    # Abbreviate home directory for display
+    EXTRACT_DISPLAY="${EXTRACT_SCRIPT/#$HOME/\~}"
+
+    # Show version + trace info
+    echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | 🔍 Trace: [${TRACE_ID:0:8}]"
+    echo "💾 $EXTRACT_DISPLAY ${TRACE_ID:0:8}"
+  else
+    # Just show version
+    echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | 🐛 Debug mode active"
+  fi
 fi
