@@ -22,6 +22,7 @@ RUN microdnf install -y \
     gzip \
     findutils \
     shadow-utils \
+    bash-completion \
     && microdnf clean all
 
 # Install Google Cloud SDK (cacheable - uses version pin)
@@ -57,19 +58,13 @@ WORKDIR /home/claude-user
 ARG CLAUDE_CODE_VERSION
 RUN bash /tmp/install-claude.sh ${CLAUDE_CODE_VERSION}
 
-# Configure bash and PATH
-RUN echo 'export HISTSIZE=10000' >> /home/claude-user/.bashrc && \
-    echo 'export HISTFILESIZE=10000' >> /home/claude-user/.bashrc && \
-    echo 'shopt -s histappend' >> /home/claude-user/.bashrc && \
-    echo 'PROMPT_COMMAND="history -a"' >> /home/claude-user/.bashrc && \
-    echo 'export PATH=$HOME/.local/bin:/usr/local/google-cloud-sdk/bin:$PATH' >> /home/claude-user/.bashrc && \
-    echo 'export DISABLE_AUTOUPDATER=1' >> /home/claude-user/.bashrc && \
-    echo 'alias claude-dangerous="claude --dangerously-skip-permissions"' >> /home/claude-user/.bashrc
-
-# Copy entrypoint script (done late to avoid invalidating Claude Code installation cache)
+# Copy config files (done late to avoid invalidating Claude Code installation cache)
 USER root
+COPY config/bashrc /home/claude-user/.bashrc
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod 755 /usr/local/bin/entrypoint.sh
+RUN chown claude-user:claude-user /home/claude-user/.bashrc && \
+    chmod 644 /home/claude-user/.bashrc && \
+    chmod 755 /usr/local/bin/entrypoint.sh
 USER claude-user
 
 # Set working directory to workspace

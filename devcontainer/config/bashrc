@@ -1,0 +1,30 @@
+# .bashrc for Claude Code devcontainer
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# History configuration
+export HISTSIZE=10000
+export HISTFILESIZE=10000
+shopt -s histappend
+PROMPT_COMMAND="history -a"
+
+# PATH configuration
+export PATH=$HOME/.local/bin:/usr/local/google-cloud-sdk/bin:$PATH
+export DISABLE_AUTOUPDATER=1
+
+# Aliases
+alias claude-dangerous="claude --dangerously-skip-permissions"
+
+# Enable bash completion
+if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+fi
+
+# Enable menu-complete for cycling through options with tab
+bind "set show-all-if-ambiguous on"
+bind "set menu-complete on"
+bind "\t: menu-complete"
+bind "\e[Z: menu-complete-backward"  # Shift+Tab to cycle backward
