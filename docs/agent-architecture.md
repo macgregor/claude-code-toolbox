@@ -1,24 +1,18 @@
 # Agent Architecture Pattern
 
-## Three-Layer Structure
+## Two-Layer Structure
 
-Each agent uses three components with single responsibilities:
+Each agent uses two components:
 
-**Skill** (reusable workflow logic)
-- Contains complete step-by-step instructions
-- Lists allowed tools in YAML frontmatter
-- Lives in `skills/<name>/SKILL.md`
-- Example: `skills/web-research/SKILL.md`
-
-**Agent** (isolated execution context)
-- Thin wrapper that invokes skill via Skill tool
-- Specifies model (haiku for speed, sonnet for complexity)
+**Agent** (complete workflow implementation)
+- Contains all workflow logic and step-by-step instructions
+- Specifies tools in YAML frontmatter
+- Specifies model (sonnet for complex workflows, haiku for simple tasks)
 - Lives in `agents/<name>.md`
 - Example: `agents/web-research.md`
 
 **Command** (user interface)
-- Thin wrapper for interactive use
-- Uses Task tool with custom subagent_type
+- Launches agent via Task tool
 - Passes user arguments to agent
 - Lives in `commands/<name>.md`
 - Example: `commands/web-research.md`
@@ -30,12 +24,18 @@ User: /command "args"
   ↓
 Command → Task tool → Agent
   ↓
-Agent → Skill tool → Skill
+Agent executes complete workflow
   ↓
-Skill executes workflow
-  ↓
-Results return up chain
+Results return to user
 ```
+
+## Why Two Layers (Not Three)
+
+**Skill layer removed** - Initial design included a skill layer that agents would invoke via Skill tool, but:
+- Agents cannot reliably invoke skills (Skill tool may not be available to subagents)
+- Skills are auto-invoked by Claude based on description matching, not programmatically
+- Adding indirection adds complexity without benefit
+- Simpler to put workflow logic directly in agent
 
 ## Template-Copy Workflow
 
@@ -68,10 +68,11 @@ For agents that generate documents:
 
 ## Why This Pattern Works
 
-**Three layers enable**:
-- Skill reuse across multiple agents
-- Isolated context per execution
-- Clear separation of concerns
+**Two layers provide**:
+- Simple, direct invocation chain
+- All workflow logic in one place (easier to maintain)
+- Isolated context per agent execution
+- Clear separation between UI (command) and logic (agent)
 
 **Template-copy ensures**:
 - Correct file location from start
@@ -89,13 +90,10 @@ For agents that generate documents:
 
 ```
 plugin/
-├── skills/
-│   └── <name>/
-│       └── SKILL.md           # Workflow instructions
 ├── agents/
-│   └── <name>.md              # Agent wrapper
+│   └── <name>.md              # Complete agent implementation
 ├── commands/
-│   └── <name>.md              # Command wrapper
+│   └── <name>.md              # Command that launches agent
 ├── templates/
 │   └── <name>-template.md     # Template with placeholders
 └── scripts/
@@ -108,9 +106,8 @@ For new agents:
 
 - [ ] Create template with `[REQUIRED:]` placeholders
 - [ ] Write validation script (check placeholders, path pattern, sections)
-- [ ] Implement skill with workflow steps
-- [ ] Create agent wrapper (invoke skill, specify model)
-- [ ] Create command wrapper (invoke agent, pass args)
+- [ ] Implement agent with complete workflow (all 5 steps)
+- [ ] Create command that launches agent via Task tool
 - [ ] Register in `plugin.json`
 - [ ] Test with sample input
 - [ ] Verify validation catches errors
@@ -119,13 +116,15 @@ For new agents:
 ## Examples
 
 **Web Research Agent**: Gathers documentation and examples, produces structured reports
-- Skill: Search web, fetch pages, organize by source type
+- Agent: Search web, fetch pages, organize by source type, fill template, validate
 - Template: Standardized research report with metadata
 - Validation: Check placeholders filled, sections exist
+- Command: `/ai-assisted-development:web-research <topic>`
 
 **Future Agents**: Apply same pattern
 - Code analysis, test generation, documentation creation
 - Each follows: copy → work → fill → validate → report
+- All workflow logic contained in agent, not split across skill layer
 
 ## Reference
 
