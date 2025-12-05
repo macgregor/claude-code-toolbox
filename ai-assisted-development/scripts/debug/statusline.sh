@@ -17,10 +17,12 @@ VERSION=$(jq -r ".plugins[\"$PLUGIN_ID\"].version // \"unknown\"" "$INSTALLED_JS
 INSTALLED_SHA=$(jq -r ".plugins[\"$PLUGIN_ID\"].gitCommitSha // \"unknown\"" "$INSTALLED_JSON" 2>/dev/null)
 INSTALL_PATH=$(jq -r ".plugins[\"$PLUGIN_ID\"].installPath // \"\"" "$INSTALLED_JSON" 2>/dev/null)
 
-# Get current trace ID for this session
+# Get current trace ID by reading the last user message from transcript
 TRACE_ID=""
-if [ -n "$SESSION_ID" ]; then
-  TRACE_ID=$(cat "/tmp/claude-trace-$SESSION_ID" 2>/dev/null || echo "")
+if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
+  # Find the most recent user message (not a tool result)
+  # User messages have string content, tool results have array content
+  TRACE_ID=$(grep '"type":"user"' "$TRANSCRIPT" | tail -100 | jq -r 'select((.message.content | type) == "string") | .uuid' | tail -1)
 fi
 
 # Build status line
@@ -30,7 +32,7 @@ if [ -z "$VERSION" ] || [ "$VERSION" = "unknown" ] || [ -z "$INSTALL_PATH" ]; th
 else
   if [ -n "$TRACE_ID" ]; then
     # Build extraction command with absolute path
-    EXTRACT_SCRIPT="$INSTALL_PATH/scripts/debug/extract-trace.py"
+    EXTRACT_SCRIPT="$INSTALL_PATH/scripts/debug/extract-trace.sh"
     # Abbreviate home directory for display
     EXTRACT_DISPLAY="${EXTRACT_SCRIPT/#$HOME/\~}"
 

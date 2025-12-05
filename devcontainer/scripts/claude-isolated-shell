@@ -6,7 +6,7 @@
 #
 # This script attaches an additional bash shell to a running claude-isolated
 # container. This is useful for:
-# - Running monitoring tools (like extract-trace.py)
+# - Running monitoring tools (like extract-trace.sh)
 # - Debugging while Claude is running
 # - Inspecting container state
 #

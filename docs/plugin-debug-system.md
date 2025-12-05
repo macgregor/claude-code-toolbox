@@ -20,73 +20,56 @@ Add to `.claude/settings.local.json`:
 
 The statusline displays:
 ```
-ai-assisted-development@claude-code-toolbox: v1.0.0 (5fff9f4) | Trace: fbb2e753
-~/.claude/plugins/claude-code-toolbox/scripts/debug/extract-trace.py fbb2e753
+ai-assisted-development@claude-code-toolbox: v1.0.0 (7fe1652) | 🔍 Trace: [a019980f]
+💾 ~/.claude/plugins/claude-code-toolbox/scripts/debug/extract-trace.sh a019980f
 ```
 
-Copy and run the extraction command to see full conversation logs.
+Copy and run the extraction command to see the full conversation turn.
 
 ## How It Works
 
 ### Statusline
 
-Shows plugin version, git SHA, and current trace ID. Reads metadata from `~/.claude/plugins/installed_plugins.json` and trace ID from `/tmp/claude-trace-{session_id}`.
+`statusline.sh` receives session data on stdin from Claude Code. It reads plugin metadata from `~/.claude/plugins/installed_plugins.json` and finds the current trace ID by reading the transcript directly.
 
-**Implementation**: `ai-assisted-development/scripts/debug/statusline.sh`
+The trace ID is the UUID of the most recent user prompt (messages with string content, not tool results).
 
-### Trace System
-
-Uses distributed tracing concepts:
-- **Trace ID**: User message UUID (identifies a conversation turn)
-- **Span ID**: Tool use ID (identifies individual tool invocations)
-
-Claude Code logs to `~/.claude/projects/{project}/{session_id}.jsonl`. This system provides extraction tools rather than duplicating logs.
+**Implementation**: `ai-assisted-development/scripts/debug/statusline.sh` (46 lines)
 
 ### Trace Extraction
 
-Run with trace ID from statusline:
+`extract-trace.sh` extracts all messages in a conversation turn. A turn starts at a user prompt and ends at the next user prompt or end of file.
+
 ```bash
-~/.claude/plugins/claude-code-toolbox/scripts/debug/extract-trace.py fbb2e753
+# Extract current turn
+extract-trace.sh a019980f
+
+# Stream new messages in real-time
+extract-trace.sh a019980f -w
+
+# Filter with jq
+extract-trace.sh a019980f | jq 'select(.type == "assistant")'
 ```
 
-Walks the parent chain to collect all messages in the conversation turn. Stops at the next user message boundary.
+The script:
+1. Finds the most recent transcript in `~/.claude/projects/-workspace/`
+2. Uses `grep -n` to find the start line (trace ID match)
+3. Searches forward for the next user prompt (end boundary)
+4. Extracts the range with `sed` or streams with `tail -f`
 
-**Implementation**: `ai-assisted-development/scripts/debug/extract-trace.py`
+**Implementation**: `ai-assisted-development/scripts/debug/extract-trace.sh` (63 lines)
 
-### Trace Capture
+### Architecture
 
-A PreToolUse hook runs before each tool execution. When `CLAUDE_TOOLBOX_DEBUG=1`:
+**Zero filesystem state**: The statusline reads directly from the transcript. No hooks write state to `/tmp`. No communication between components.
 
-1. Extracts trace ID by walking parent chain from tool use to user message
-2. Compares to existing trace ID for this session
-3. Updates `/tmp/claude-trace-{session_id}` if new turn detected
+**Pure streaming**: Uses standard Unix tools (`grep`, `sed`, `tail`, `jq`) instead of custom file watching or tree traversal.
 
-**Implementation**: `ai-assisted-development/scripts/debug/pre-tool-use-trace.sh`
-
-**State files**:
-- `/tmp/claude-trace-{session_id}` - Current trace ID
-- `/tmp/claude-trace-info-{trace_id}` - Transcript path
-
-## Claude Code Discovery: Tool Results as User Messages
-
-Tool results appear in transcripts as `type: "user"` messages whose `parentUuid` points to an assistant message. This differs from actual user prompts.
-
-**Message flow**:
-```
-user (prompt) UUID: abc123
-  └─> assistant
-      └─> assistant (with tool use) UUID: def456
-          └─> user (tool result) UUID: ghi789  ← appears as "user" type!
-              └─> assistant
-```
-
-Walking the parent chain encounters the tool result first. Naive implementations stop there, causing trace ID to change on every tool use. The fix skips user messages whose parent is an assistant message.
-
-**Implementation**: See `extract-trace-id.sh` for the parent chain walking logic that handles this case.
+**Composable**: Output is line-delimited JSON. Pipe through `jq`, `grep`, `tail`, or any standard tool.
 
 ## Disabling Debug Mode
 
-Set to `0` or remove the configuration:
+Remove the environment variable:
 
 ```json
 {
@@ -96,34 +79,28 @@ Set to `0` or remove the configuration:
 }
 ```
 
-## Design
-
-**Statusline over Stop hooks**: Stop hooks didn't display output (`stop_hook_active:false`). Statusline updates automatically and is always visible.
-
-**Extract, don't duplicate**: Claude Code logs everything. Duplicating wastes space and creates sync issues.
-
-**Temp files for state**: Session isolation, automatic cleanup, no path passing required.
-
-**Python for extraction**: Tree traversal with turn boundary detection. jq was complex and error-prone.
-
 ## Troubleshooting
 
-**Statusline not showing**: Check `CLAUDE_TOOLBOX_DEBUG=1` is set. Verify statusline command path. Reload: `/plugin reload ai-assisted-development@claude-code-toolbox`
+**Statusline shows "Debug mode active"**: The transcript has no user prompts with string content yet. Send a message and the trace ID will appear.
 
-**Trace ID not updating**: Expected within a turn. Updates only when you submit a new prompt. If stuck, check `/tmp/claude-trace-*` files.
+**Trace ID not updating**: Expected. The trace ID stays the same throughout your conversation turn. It changes only when you submit a new prompt.
 
-**Extraction fails**: Verify trace ID in statusline. Check `/tmp/claude-trace-info-{trace_id}` exists.
+**Extraction returns nothing**: Check that the trace ID exists in the transcript. Try the full UUID instead of the prefix.
 
-**Empty extraction**: Trace ID may be from different session. Try full UUID instead of prefix.
+**Wrong transcript**: The script finds the most recent `.jsonl` file. If multiple sessions are active, specify the transcript path manually.
 
 ## Implementation Files
 
 ```
 ai-assisted-development/scripts/debug/
-  statusline.sh              # Statusline display
-  extract-trace.py           # Extract conversation turn
-  extract-trace-id.sh        # Find root user message UUID
-  pre-tool-use-trace.sh      # PreToolUse hook
+  statusline.sh              # Display plugin version and trace ID
+  extract-trace.sh           # Extract conversation turn (bash + streaming)
 ```
 
-See `docs/plans/2025-12-05-plugin-debugging-versioning.md` for detailed design and rationale.
+## Design Rationale
+
+**Read from source**: Claude Code logs everything to transcript files. Read directly from the source instead of duplicating data.
+
+**Let Linux do the work**: Use `grep`, `sed`, and `tail -f` instead of custom file watching. These tools are fast, reliable, and composable.
+
+**Simple boundaries**: A turn is everything between two user prompts. Find the boundaries and extract the range. No graph traversal needed.

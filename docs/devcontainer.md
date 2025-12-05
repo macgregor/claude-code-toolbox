@@ -116,11 +116,9 @@ claude-isolated-shell /path/to/project
 ```
 
 This is useful for:
-- Running debug tools like `extract-trace.py` while Claude operates
+- Running debug tools like `extract-trace.sh` while Claude operates
 - Inspecting container state during execution
 - Running monitoring scripts without interrupting Claude
-
-Both shells share the same container filesystem (including `/tmp`), so debug traces and other temporary files are visible to both.
 
 ### VS Code
 
