@@ -35,16 +35,6 @@ Start a Claude Code session and run:
 
 This approach allows you to iterate on plugin changes easily during development.
 
-### Optional: Symlink CLAUDE.md
-
-The `CLAUDE.md` file contains personal workflow preferences and context. You can symlink it to use it globally:
-
-```bash
-ln -s $(pwd)/CLAUDE.md ~/.claude/CLAUDE.md
-```
-
-Note: This overwrites any existing `~/.claude/CLAUDE.md`. Back up your current file first if needed.
-
 ## Usage
 
 ### Reloading After Changes
