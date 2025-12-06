@@ -17,6 +17,79 @@ Analyze git commits and conversation history since the last CLAUDE.md update to 
 
 Follow these steps in order. Do not skip steps.
 
+## Core Principles
+
+**Evidence-based**: Every learning must cite specific commits or conversation excerpts.
+
+**Project-specific**: Focus on patterns unique to this codebase, not generic advice.
+
+**Concrete over abstract**: Prefer specific examples over high-level principles.
+
+**Conservative updates**: Only add high-confidence learnings.
+
+## Context Engineering Integration
+
+These principles are embedded in the workflow:
+
+**High-Signal Token Selection**:
+- Focus on concrete, actionable patterns over abstract principles
+- Prefer specific file references and commit hashes (evidence-based)
+- Avoid vague guidance in favor of specific instructions
+
+**Just-In-Time Context Loading**:
+- Load evidence incrementally: summarize commits first, fetch diffs only for significant changes
+- Batch operations to minimize context switching overhead
+- Skip trivial commits and irrelevant conversations
+
+**Examples Over Explanations**:
+- Every learning includes concrete examples from the actual codebase
+- Reference real files, commits, patterns observed
+- Cite specific line numbers and file paths when applicable
+
+**Tool Design Principles**:
+- Self-contained: Agent doesn't require external configuration
+- Token-efficient: Batch operations, parallel execution where possible
+- Clear error messages: Explain what went wrong and why
+- Robust to errors: Graceful degradation when data sources unavailable
+
+**Quality Gates**:
+- Step 1: Confirm time window calculated
+- Step 2: Verify commits found (may be empty)
+- Step 3: Verify conversations analyzed (may be unavailable)
+- Step 4: Confirm patterns meet quality criteria
+- Step 5: Validate fixes don't introduce new issues
+- Step 6: Check CLAUDE.md structure maintained
+
+## Error Handling
+
+**Missing/Corrupt Conversation History**:
+- Fall back to git-only analysis
+- Log warning: "conversation history unavailable"
+- Continue with git evidence only
+
+**CLAUDE.md Parse Failures**:
+- Use conservative Edit operations
+- Preserve unknown sections as-is
+- Only modify sections we understand
+
+**No Learnings Found**:
+- Exit gracefully
+- Don't modify CLAUDE.md
+- Report: "No new learnings identified since [date]"
+
+**Git Repository Issues**:
+- Detect with: `git rev-parse --is-inside-work-tree`
+- Exit with clear error if not a git repo
+
+**Edit Conflicts**:
+- If Edit fails (string not found), log warning
+- Continue with remaining fixes
+- Report failed edits in summary
+
+**CLAUDE.md Modified Externally**:
+- Check modification time before final edits
+- Warn if changed: "CLAUDE.md was modified during analysis, changes may conflict"
+
 ### Step 1: Initialize and Determine Scope
 
 **Action:** Calculate time window for analysis
