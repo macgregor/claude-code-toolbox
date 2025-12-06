@@ -98,3 +98,57 @@ For each discovered file:
 **Quality Gate:** Have list of relevant file entries (categorized by tier) before proceeding.
 
 **Before proceeding:** State how many files were assessed and how many entries were created per tier.
+
+### Step 4: Generate Index Document
+
+**Action:** Write structured markdown index to /tmp/
+
+1. Build index content with this structure:
+
+```markdown
+# Context Index: <user's prompt>
+
+Generated: <ISO 8601 timestamp>
+Prompt: <original user prompt>
+
+## Highly Relevant
+
+[For each highly relevant file:]
+- **Path:** /absolute/path/to/file.md
+  **Type:** File type
+  **Contains:** Specific content description (2-3 sentences)
+  **Relevance:** Why relevant to this prompt
+
+## Moderately Relevant
+
+[For each moderately relevant file:]
+- **Path:** /absolute/path/to/file.md
+  **Type:** File type
+  **Contains:** Specific content description (2-3 sentences)
+  **Relevance:** Why relevant to this prompt
+
+## Possibly Relevant
+
+[For each possibly relevant file:]
+- **Path:** /absolute/path/to/file.md
+  **Type:** File type
+  **Contains:** Specific content description (2-3 sentences)
+  **Relevance:** Why relevant to this prompt
+```
+
+2. If no relevant files found:
+   - Create index with message: "No files matched relevance criteria for prompt: <prompt>"
+   - Include suggestion to broaden search or check prompt
+
+3. If errors occurred during file reading:
+   - Include section: "## Errors"
+   - List files that couldn't be read: "⚠ Could not read: /path/to/file.md"
+
+4. If large file count (20+) caused early stopping:
+   - Add note: "Analysis limited to most recent files for efficiency"
+
+5. Write index to `/tmp/claude-context-<timestamp>.md` using Write tool
+
+**Quality Gate:** Index file created at expected path.
+
+**Before proceeding:** Confirm index file written successfully.
