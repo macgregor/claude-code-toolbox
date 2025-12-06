@@ -12,5 +12,5 @@
 ## Conflicting Information
 [REQUIRED: Contradictions, gaps, or missing information]
 
-## Recommendations
-[REQUIRED: What to do next based on synthesis and user's objective]
+## Critical Insights
+[REQUIRED: What are the most important findings that would impact decisions? What patterns have the strongest evidence across sources? What information is most relevant to the user's objective?]

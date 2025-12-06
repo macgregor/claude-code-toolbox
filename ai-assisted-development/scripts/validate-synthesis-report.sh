@@ -37,7 +37,7 @@ REQUIRED_SECTIONS=(
   "## Input Sources"
   "## Key Patterns Identified"
   "## Conflicting Information"
-  "## Recommendations"
+  "## Critical Insights"
 )
 
 for section in "${REQUIRED_SECTIONS[@]}"; do
