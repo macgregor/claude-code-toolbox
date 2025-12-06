@@ -52,3 +52,43 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have time window (since_timestamp) and project info before proceeding.
 
 **Before proceeding:** Confirm you have calculated the lookback timestamp and project path.
+
+### Step 2: Gather Git Evidence
+
+**Action:** Collect and analyze git commits within time window
+
+1. Get commits since timestamp:
+   - Command: `git log --since=<timestamp> --format='%H|%an|%at|%s' --no-merges`
+   - Parse output into: hash|author|timestamp|subject
+   - If no commits found: Note "no git evidence" and skip to Step 3
+
+2. Analyze commits in batches:
+   - **CRITICAL: Process 5 commits per message for diffs**
+   - For each commit, get diff: `git show <hash> --stat --format='%b'`
+   - Skip trivial commits: typos, whitespace, single-line changes
+   - Categorize by pattern:
+     - Features: "feat:", "add", "implement"
+     - Fixes: "fix:", "bug", "error", "correct"
+     - Refactors: "refactor:", "rename", "restructure", "simplify"
+     - Docs: "docs:", changes to .md files only
+     - Config: changes to config files, CI/CD, build tools
+
+3. Build commit evidence database:
+   - For each significant commit, extract:
+     - **Hash**: Full commit SHA
+     - **Category**: From step 2 categorization
+     - **Files changed**: List of modified files
+     - **Summary**: Commit message + key changes from diff
+   - Store in memory for pattern extraction
+
+4. Identify notable patterns:
+   - **Repeated fixes**: Same file/function fixed multiple times
+   - **Large refactors**: 10+ files changed together
+   - **Reverts**: Commits that undo previous work
+   - **Path patterns**: Repeated changes to specific directories
+
+**Parallel execution:** Process commit diffs 5 at a time in single message.
+
+**Quality Gate:** Have commit evidence database (may be empty) before proceeding.
+
+**Before proceeding:** Confirm you have analyzed commits and built evidence database.
