@@ -92,3 +92,47 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have commit evidence database (may be empty) before proceeding.
 
 **Before proceeding:** Confirm you have analyzed commits and built evidence database.
+
+### Step 3: Gather Conversation Evidence
+
+**Action:** Analyze Claude Code conversation history within time window
+
+1. Find conversation session files:
+   - If project_hash is empty (from Step 1): Skip to Step 4 with note "conversation history unavailable"
+   - Path pattern: `~/.claude/projects/<project-hash>/*.jsonl`
+   - Command: `find ~/.claude/projects/<project-hash>/ -name "*.jsonl" -type f 2>/dev/null`
+   - Filter by modification time >= since_timestamp
+
+2. Parse JSONL files in batches:
+   - **CRITICAL: Read 5 JSONL files per message (batch Read calls)**
+   - Each line is JSON: `{"role": "user"|"assistant", "content": [...], "timestamp": "..."}`
+   - Extract message pairs: user request → assistant response
+   - Skip system messages and tool calls (focus on conversation)
+
+3. Identify learning patterns:
+   - **Error-correction sequences**:
+     - Pattern: Error message → user correction → working solution
+     - Extract: What was wrong, what fixed it, which files involved
+   - **Explicit guidance**:
+     - Pattern: User says "always X", "don't do Y", "when Z, use W"
+     - Extract: Directive, context, reasoning if provided
+   - **Repeated mistakes**:
+     - Pattern: Same error/correction appears in 2+ sessions
+     - Extract: Mistake pattern, how it was corrected each time
+   - **Anti-patterns discovered**:
+     - Pattern: "No, that's wrong because...", "This approach won't work..."
+     - Extract: What was wrong, why, correct approach
+
+4. Build conversation evidence database:
+   - For each learning pattern:
+     - **Timestamp**: When conversation occurred
+     - **Type**: error-correction, explicit-guidance, repeated-mistake, anti-pattern
+     - **Summary**: What was learned (2-3 sentences)
+     - **Context**: Files/technologies involved
+     - **Evidence excerpt**: Relevant user/assistant exchange
+
+**Token management:** Batch file reads (5 per message), skip sessions with no learning signals.
+
+**Quality Gate:** Have conversation evidence database (may be empty) before proceeding.
+
+**Before proceeding:** Confirm you have analyzed conversations and built evidence database.
