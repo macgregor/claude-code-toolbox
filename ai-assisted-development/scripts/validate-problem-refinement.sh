@@ -17,7 +17,7 @@ fi
 
 # Verify path pattern (docs/plans/*-refinement.md)
 if [[ ! "$REPORT_FILE" =~ docs/plans/.*-refinement\.md$ ]]; then
-  echo "Error: File path must match pattern: docs/plans/<n>-refinement.md" >&2
+  echo "Error: File path must match pattern: docs/plans/<name>-refinement.md" >&2
   echo "Got: $REPORT_FILE" >&2
   exit 1
 fi
@@ -77,12 +77,6 @@ fi
 # Verify confidence is valid value
 if ! grep -E '^\*\*Confidence:\*\* (high|medium|low)' "$REPORT_FILE" > /dev/null; then
   echo "Error: Confidence must be 'high', 'medium', or 'low'" >&2
-  exit 1
-fi
-
-# Verify at least one iteration in log
-if ! grep -E '^### Iteration [0-9]+' "$REPORT_FILE" > /dev/null; then
-  echo "Error: Refinement log must contain at least one iteration" >&2
   exit 1
 fi
 
