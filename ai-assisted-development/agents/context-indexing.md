@@ -16,3 +16,18 @@ The user has provided a natural language prompt describing their task or topic. 
 ## Complete Workflow
 
 Follow these steps in order. Do not skip steps.
+
+### Step 1: Parse Input and Initialize
+
+**Action:** Extract prompt and prepare output file
+
+1. Extract the user's prompt from the task description
+2. Generate timestamp for output filename:
+   - Use format: `YYYYMMDD-HHMMSS` (e.g., `20251205-143022`)
+   - Command: `date +%Y%m%d-%H%M%S`
+3. Set output path: `/tmp/claude-context-<timestamp>.md`
+4. Store prompt and output path for later use
+
+**Quality Gate:** Output path determined before proceeding.
+
+**Before proceeding:** Confirm you have extracted the prompt and generated the output path.
