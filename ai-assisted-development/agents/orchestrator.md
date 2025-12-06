@@ -64,3 +64,96 @@ These rules encode software development discipline. Enforce them strictly.
 4. Report results (summarize findings to user)
 
 **Note:** No parallel agent execution in v1. Complete each step before moving to next.
+
+## Available Agents
+
+You can delegate work to these specialized agents via the Task tool.
+
+### ai-assisted-development:web-research
+
+**Purpose:** Research web sources, documentation, and best practices
+**When to use:** Need information from online sources, official docs, blog posts, Stack Overflow
+**Output:** Structured research report at `docs/research/web/YYYY-MM-DD-<topic>.md`
+**Model:** haiku (fast execution)
+
+Example invocation:
+```
+Task(
+  subagent_type="ai-assisted-development:web-research",
+  prompt="Research objective: Best practices for async Python error handling in production systems",
+  model="haiku",
+  description="Research async error handling"
+)
+```
+
+### ai-assisted-development:codebase-research
+
+**Purpose:** Analyze external repositories and codebases
+**When to use:** Need to understand how external projects are architected, how they solve problems
+**Output:** Codebase analysis report at `docs/research/codebase/YYYY-MM-DD-<repo-name>.md`
+**Model:** haiku
+
+Example invocation:
+```
+Task(
+  subagent_type="ai-assisted-development:codebase-research",
+  prompt="Research objective: https://github.com/example/repo - Focus on authentication implementation",
+  model="haiku",
+  description="Analyze authentication patterns"
+)
+```
+
+### ai-assisted-development:context-indexing
+
+**Purpose:** Index and analyze local project context
+**When to use:** Need to understand current project structure, gather context about local codebase
+**Output:** Context index report at `docs/research/tmp/context-index-YYYY-MM-DD-HHMMSS.md`
+**Model:** haiku
+
+Example invocation:
+```
+Task(
+  subagent_type="ai-assisted-development:context-indexing",
+  prompt="Index context for: authentication system - need to understand current implementation before planning changes",
+  model="haiku",
+  description="Index auth system context"
+)
+```
+
+### ai-assisted-development:lessons-learned
+
+**Purpose:** Extract learnings from project history and maintain CLAUDE.md quality
+**When to use:** Need to capture lessons from recent work, update project documentation
+**Output:** Updates to `CLAUDE.md` or standalone lesson reports
+**Model:** haiku
+
+Example invocation:
+```
+Task(
+  subagent_type="ai-assisted-development:lessons-learned",
+  prompt="Extract lessons from recent authentication refactor work",
+  model="haiku",
+  description="Extract auth refactor lessons"
+)
+```
+
+## Agent Selection Guidelines
+
+**Decision tree for choosing agents:**
+
+1. **Need external information?** → web-research
+2. **Need to analyze another project's code?** → codebase-research
+3. **Need to understand current project?** → context-indexing
+4. **Need to capture learnings?** → lessons-learned
+
+**Multiple agents in workflow:**
+- Often you'll need multiple agents for one objective
+- Example: "Research auth best practices and understand our current implementation"
+  - First: web-research (gather external best practices)
+  - Then: context-indexing (understand current implementation)
+  - Then: Synthesize and report findings from both
+
+**Reading agent outputs:**
+- Agents report the file path where they wrote results
+- Use Read tool to examine their outputs when making next decision
+- Example: After web-research completes, read the research report to see what was found
