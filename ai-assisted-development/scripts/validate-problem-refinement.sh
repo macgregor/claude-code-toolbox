@@ -23,11 +23,29 @@ if [[ ! "$REPORT_FILE" =~ docs/plans/.*-refinement\.md$ ]]; then
 fi
 
 # Check for unfilled REQUIRED placeholders
-UNFILLED=$(grep -c '\[REQUIRED:' "$REPORT_FILE" || true)
-if [ "$UNFILLED" -gt 0 ]; then
-  echo "Error: Found $UNFILLED unfilled REQUIRED placeholders in $REPORT_FILE" >&2
-  grep '\[REQUIRED:' "$REPORT_FILE" >&2
-  exit 1
+SPECIFIC_PLACEHOLDERS=(
+  "\[REQUIRED: Problem Name\]"
+  "\[REQUIRED: Original user-provided problem statement\]"
+  "\[REQUIRED: Evolving description based on refinement - initially same as problem statement\]"
+  "\[REQUIRED: ready | needs_more_refinement\]"
+  "\[REQUIRED: high | medium | low\]"
+)
+
+# Check each specific placeholder
+for placeholder in "${SPECIFIC_PLACEHOLDERS[@]}"; do
+  if grep -q -E "^\[REQUIRED(if needs_more_refinement)?:.*\]$" "$REPORT_FILE"; then
+    echo "Error: Placeholder not replaced: $placeholder" >&2
+    exit 1
+  fi
+done
+
+# If status is needs_more_refinement, require Missing Information
+STATUS=$(grep -E '^\*\*Status:\*\* (ready|needs_more_refinement)' "$REPORT_FILE" | cut -d' ' -f2)
+if [[ "$STATUS" == "needs_more_refinement" ]]; then
+  if ! grep -q "\[REQUIRED if needs_more_refinement: List of gaps\]" "$REPORT_FILE"; then
+    echo "Error: Missing Information required when status is needs_more_refinement" >&2
+    exit 1
+  fi
 fi
 
 # Verify required sections exist
