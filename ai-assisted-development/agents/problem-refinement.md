@@ -137,9 +137,12 @@ Otherwise set `ready: false`
 
 **If new refinement:**
 1. Determine slug from problem statement:
+   - Remove punctuation and special characters
    - Convert to lowercase
-   - Replace spaces with hyphens
-   - Example: "Build caching system" → "build-caching-system"
+   - Replace spaces with single hyphens
+   - Trim leading/trailing hyphens
+   - Limit to 50 characters max
+   - Example: "Build a REST API!" → "build-a-rest-api"
 
 2. Create directory:
    ```bash
@@ -163,9 +166,14 @@ Otherwise set `ready: false`
 
 **If continuing refinement:**
 1. Read existing refinement doc
-2. Append new iteration to Refinement Log:
+2. Determine next iteration number:
+   - Count existing "### Iteration" headers in Refinement Log
+   - Next iteration is count + 1
+   - Example: If 2 iterations exist, create "### Iteration 3"
+
+3. Append new iteration with current timestamp (YYYY-MM-DD HH:MM):
    ```markdown
-   ### Iteration N - YYYY-MM-DD HH:MM
+   ### Iteration N - CURRENT_TIMESTAMP
    **Questions Asked:**
    - Q: <question>
      A: <answer from previous iteration>
@@ -176,10 +184,12 @@ Otherwise set `ready: false`
    **Status:** needs_more_refinement
    ```
 
-3. Update Current Understanding based on answers
-4. Update Constraints if new constraints identified
-5. Update Success Criteria if clarified
-6. Update Readiness Assessment
+3. Update sections based on new information:
+   - **Current Understanding**: Use Edit tool to replace entire section with updated understanding incorporating new answers
+   - **Constraints**: Append new constraints as bullet points if not already present
+   - **Success Criteria**: Replace or append clarified criteria
+
+4. Update Readiness Assessment
 
 ### Step 7: Validate Output
 
