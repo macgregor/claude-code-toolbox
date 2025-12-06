@@ -137,27 +137,6 @@ Task(
 )
 ```
 
-## Agent Selection Guidelines
-
-**Decision tree for choosing agents:**
-
-1. **Need external information?** → web-research
-2. **Need to analyze another project's code?** → codebase-research
-3. **Need to understand current project?** → context-indexing
-4. **Need to capture learnings?** → lessons-learned
-
-**Multiple agents in workflow:**
-- Often you'll need multiple agents for one objective
-- Example: "Research auth best practices and understand our current implementation"
-  - First: web-research (gather external best practices)
-  - Then: context-indexing (understand current implementation)
-  - Then: Synthesize and report findings from both
-
-**Reading agent outputs:**
-- Agents report the file path where they wrote results
-- Use Read tool to examine their outputs when making next decision
-- Example: After web-research completes, read the research report to see what was found
-
 ## State Management
 
 ### TodoWrite as Primary State
@@ -281,55 +260,80 @@ Ask: Are we done?
 
 **If not done:** Proceed to Step 3
 
-**Step 3: Determine Next Action**
+**Step 3: Get Decision**
 
-Use hybrid decision model (gates + reasoning):
+Spawn planner to determine next action:
 
-**Apply Process Gates:**
-- Gate 1: Do I understand requirements? If no → clarify with AskUserQuestion
-- Gate 2: Do I have completion criteria? If no → define them now
-- Gate 3: Am I following sequential flow? Check workflow order
+1. Build state summary for planner:
+   - User's original objective
+   - Completed work (list agents that ran, files produced)
+   - Current TodoWrite status
+   - Available files for synthesis
 
-**Reasoning within gates:**
-- What information is missing?
-- Which agent can gather it?
-- Do I need to read previous outputs first?
-- Have I identified gaps in gathered information?
+2. Spawn planner:
+   ```
+   Task(
+     subagent_type="ai-assisted-development:workflow-planner",
+     prompt="User objective: <original user request>
 
-**Common decision patterns:**
-- Need external info + haven't searched yet → spawn web-research
-- Need codebase understanding + haven't indexed yet → spawn context-indexing
-- Have agent outputs + haven't read them yet → Read the files
-- Read outputs + found gaps → spawn additional research
-- Read outputs + sufficient info + haven't synthesized → synthesize now
-- Synthesized findings + ready to report → report to user
+   Current state:
+   - Completed: <list of completed work>
+   - Available files: <list of files>
+   - TodoWrite: <current todo status>
+
+   Determine next action.",
+     model="sonnet",
+     description="Get next workflow decision"
+   )
+   ```
+
+3. Parse planner's JSON response:
+   - Read planner's final message
+   - Parse JSON (fail fast if malformed)
+   - Extract: action, agent, inputs, rationale
+
+4. If JSON parsing fails:
+   - Report error to user with planner's response
+   - Stop workflow (fail fast)
 
 **Step 4: Execute Action**
 
-Take the determined action:
+Execute the action specified by planner's JSON:
 
-**If spawning subagent:**
-1. Update TodoWrite: mark delegation task as `in_progress`
-2. Use Task tool with appropriate subagent_type
-3. Wait for subagent to complete and return
+**If action = "research":**
+1. Update TodoWrite: mark research task as `in_progress`
+2. Spawn agent specified in planner's `agent` field
+3. Pass topic from planner's `inputs.topic`
+4. Wait for agent to complete and return file path
 
-**If reading files:**
-1. Update TodoWrite: mark reading task as `in_progress`
-2. Use Read tool on the file path
-3. Mark reading task as `completed`
+**If action = "index":**
+1. Update TodoWrite: mark indexing task as `in_progress`
+2. Spawn context-indexing agent
+3. Pass context from planner's `inputs`
+4. Wait for agent to complete
 
-**If asking user:**
-1. Use AskUserQuestion to clarify
-2. Update understanding based on response
-
-**If synthesizing:**
+**If action = "synthesize":**
 1. Update TodoWrite: mark synthesis task as `in_progress`
-2. Analyze all gathered information
-3. Identify key findings, patterns, gaps
-4. Mark synthesis as `completed`
+2. Spawn synthesis agent with:
+   - User's original objective
+   - File paths from planner's `inputs` array
+3. Wait for agent to return synthesis report path
+4. Mark synthesis task as `completed`
 
-**If reporting:**
+**If action = "clarify":**
+1. Use AskUserQuestion with question from planner's `inputs.question`
+2. Update understanding based on user's response
+3. Continue workflow (will spawn planner again on next iteration)
+
+**If action = "report":**
 1. Covered in Step 2 (completion criteria)
+2. Synthesize final results
+3. Report to user with file references
+4. Stop workflow
+
+**If action not recognized:**
+- Report error to user with planner's decision
+- Stop workflow (fail fast)
 
 **Step 5: Update State**
 
