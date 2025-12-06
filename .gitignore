@@ -7,3 +7,6 @@ temp/
 *.bak
 *.swp
 .cache/
+
+# Orchestrator ephemeral state
+.orchestrator/
