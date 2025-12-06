@@ -22,17 +22,21 @@ Follow these steps in order. Do not skip steps.
 **Action:** Copy the template to target location
 
 1. Determine the output filename:
-   - Use today's date in YYYY-MM-DD format (today is 2025-12-05)
+   - Use today's date in YYYY-MM-DD format (today is 2025-12-06)
    - Extract repo name from the input:
-     - If URL (starts with http:// or https://): use last path segment (e.g., "user/repo" → "repo")
+     - If URL (starts with http:// or https://):
+       - For GitHub/GitLab URLs, extract org and repo: "github.com/user/repo" → "user-repo"
+       - For other URLs, use last path segment: "example.com/repo" → "repo"
      - If path: use basename of the directory
-   - Create a slug from repo name (lowercase, hyphens)
-   - Format: `docs/research/codebase/YYYY-MM-DD-<repo-slug>.md`
-   - Example: `docs/research/codebase/2025-12-05-claude-code.md`
+   - Create a slug from extracted name (lowercase, hyphens, no special chars)
+   - Format: `docs/research/codebase/YYYY-MM-DD-<slug>.md`
+   - Examples:
+     - GitHub URL "https://github.com/ruvnet/claude-flow" → `2025-12-06-ruvnet-claude-flow.md`
+     - Local path "/home/user/my-project" → `2025-12-06-my-project.md`
 
 2. Copy template to target location:
    - From: `ai-assisted-development/templates/codebase-analysis-report.md`
-   - To: `docs/research/codebase/YYYY-MM-DD-<repo-slug>.md`
+   - To: `docs/research/codebase/YYYY-MM-DD-<slug>.md`
 
 3. Verify the copy succeeded (file exists at target location)
 
@@ -195,7 +199,9 @@ Before proceeding to validation, verify:
 - [ ] Tech stack is bulleted list of names only
 - [ ] Related repositories section has links or "None identified"
 - [ ] Metadata has current timestamp and model identifier
-- [ ] Filename follows pattern: `docs/research/codebase/YYYY-MM-DD-<repo-name>.md`
+- [ ] Filename follows pattern: `docs/research/codebase/YYYY-MM-DD-<slug>.md`
+  - For GitHub/GitLab URLs: includes org/user (e.g., `ruvnet-claude-flow.md`)
+  - For local paths: uses directory basename
 
 If any item is incomplete, fix it now before validation.
 
@@ -207,7 +213,7 @@ If any item is incomplete, fix it now before validation.
 
 1. Run the validation script:
    ```bash
-   ai-assisted-development/scripts/validate-codebase-report.sh docs/research/codebase/YYYY-MM-DD-<repo-slug>.md
+   ai-assisted-development/scripts/validate-codebase-report.sh docs/research/codebase/YYYY-MM-DD-<slug>.md
    ```
    (Use the actual filename you created in Step 1)
 
@@ -257,12 +263,12 @@ If any item is incomplete, fix it now before validation.
 
 **If validation passed:**
 - Report success with filepath
-- Example: "Codebase analysis completed successfully: docs/research/codebase/2025-12-05-claude-code.md"
+- Example: "Codebase analysis completed successfully: docs/research/codebase/2025-12-06-anthropics-claude-code.md"
 
 **If validation failed after retry:**
 - Report failure with error details
 - Include the validation error output
-- Example: "Codebase analysis validation failed after retry. Errors: [list errors]. File saved at: docs/research/codebase/2025-12-05-claude-code.md"
+- Example: "Codebase analysis validation failed after retry. Errors: [list errors]. File saved at: docs/research/codebase/2025-12-06-anthropics-claude-code.md"
 
 ## Important Notes
 
