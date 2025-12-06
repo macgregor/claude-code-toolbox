@@ -17,7 +17,8 @@
     "./agents/web-research.md",
     "./agents/codebase-research.md",
     "./agents/context-indexing.md",
-    "./agents/lessons-learned.md"
+    "./agents/lessons-learned.md",
+    "./agents/problem-refinement.md"
   ],
   "skills": "./skills",
   "commands": "./commands",
