@@ -65,6 +65,35 @@ The agent:
 4. Selective deep reads of 2-3 key files
 5. Related repository extraction
 
+### Context Indexing Agent
+
+**Purpose:** Analyzes user prompts and discovers relevant local documentation, producing structured context indexes with tiered relevance assessments.
+
+**Use case:** Automate finding and linking relevant files when crafting requests to other agents.
+
+**Input:** Natural language prompt describing your task/topic
+
+**Output:** Structured markdown index at `/tmp/claude-context-<timestamp>.md` with:
+- Files grouped by relevance tier (Highly/Moderately/Possibly Relevant)
+- Absolute file paths
+- Brief explanation of why each file is relevant
+
+**Example usage:**
+```bash
+# Via Task tool
+subagent_type: ai-assisted-development:context-indexing
+prompt: "multi-agent coordination patterns"
+
+# Via @mention
+@ai-assisted-development:context-indexing multi-agent coordination patterns
+```
+
+**Search scope (current version):**
+- `docs/research/**/*.md` - Research reports
+- `docs/plans/**/*.md` - Design documents
+- `README*.md` - Project documentation
+- `CLAUDE.md` - Project context files
+
 ## Report Format
 
 Both agents produce markdown reports in `docs/research/<type>/` following standardized templates:
