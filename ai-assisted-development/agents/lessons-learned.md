@@ -240,3 +240,51 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have fixes list and validated candidate learnings before proceeding.
 
 **Before proceeding:** Confirm you have analyzed CLAUDE.md and prepared fixes.
+
+### Step 6: Apply Updates to CLAUDE.md
+
+**Action:** Fix inconsistencies and add new learnings
+
+1. Apply inconsistency fixes:
+   - **CRITICAL: Process fixes from bottom to top (preserve line numbers)**
+   - For each fix in fixes list:
+     - Use Edit tool with exact old_string → new_string
+     - One Edit call per fix (don't batch)
+     - If fix fails (string not found), log warning and continue
+   - Order: contradictions first, then outdated refs, then vague guidance
+
+2. Determine insertion points for new learnings:
+   - For each candidate learning:
+     - Match category to existing CLAUDE.md sections
+     - If section exists (e.g., "## Path Context Awareness"):
+       - Find end of section (before next ## header)
+       - Insert as new ### subsection
+     - If section doesn't exist:
+       - Create new ## section
+       - Place after similar topics or before final section
+   - Maintain alphabetical/logical ordering within sections
+
+3. Format learnings consistently:
+   ```markdown
+   ### Pattern: [Pattern title]
+   **Evidence**: commit [hash] / conversation [timestamp]
+   **Context**: [When/where this applies]
+   **Guidance**: [Specific actionable instruction]
+   **Example**: [Optional - concrete code/file reference]
+   ```
+
+4. Insert learnings:
+   - Use Edit tool to insert each learning at determined point
+   - Preserve existing formatting (blank lines, indentation)
+   - One Edit per learning insertion
+
+5. Deduplicate against existing content:
+   - Before inserting, check if similar pattern already exists in section
+   - If exists: Use Edit to enhance existing entry with new evidence
+   - If new angle: Insert as separate pattern
+
+**Safety:** All edits are tracked by git - changes are reversible.
+
+**Quality Gate:** CLAUDE.md updated with fixes and learnings applied.
+
+**Before proceeding:** Confirm you have successfully updated CLAUDE.md.
