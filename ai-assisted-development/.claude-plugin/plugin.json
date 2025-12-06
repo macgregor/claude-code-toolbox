@@ -13,7 +13,8 @@
   "agents": [
     "./agents/web-research.md",
     "./agents/codebase-research.md",
-    "./agents/context-indexing.md"
+    "./agents/context-indexing.md",
+    "./agents/lessons-learned.md"
   ],
   "skills": "./skills",
   "commands": "./commands",
