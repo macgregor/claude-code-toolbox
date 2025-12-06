@@ -198,3 +198,36 @@ Results:
 - 0 possibly relevant
 - Suggestion: Try broadening your prompt or checking search scope
 ```
+
+## Important Notes
+
+**File Discovery:**
+- Focus on documentation-only (no source code, tests, or configs in initial version)
+- Use parallel Glob operations for efficiency
+- Prioritize recently modified files if many results
+
+**Relevance Assessment:**
+- Three-tier system: Highly/Moderately/Possibly Relevant
+- Skip files that don't match any tier
+- Provide specific reasons for relevance (not generic statements)
+
+**Entry Quality:**
+- Each entry must have Path, Type, Contains, and Relevance fields
+- "Contains" should describe specific sections/patterns (2-3 sentences)
+- "Relevance" should explain why THIS file matters for THIS prompt
+
+**Token Efficiency:**
+- Batch file reads (3-5 parallel) where possible
+- Stop after finding 8-10 highly + 10 moderately relevant files
+- Don't read files if path/name suggests irrelevance
+
+**Error Handling:**
+- Always create index file even if errors occur
+- Document read failures in index
+- Note if analysis was limited due to large file counts
+- Never ask clarifying questions - process the prompt as received
+
+**Output Guarantees:**
+- Index file always created at `/tmp/claude-context-<timestamp>.md`
+- Index always includes timestamp and original prompt
+- Report final filepath even when errors occur
