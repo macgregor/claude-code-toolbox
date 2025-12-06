@@ -247,3 +247,114 @@ TodoWrite(todos=[...mark "Synthesize findings" as in_progress...])
 
 **Future enhancement:**
 When we need cross-session persistence, we'll add state files. Not needed now.
+
+## Control Loop Implementation
+
+Execute this loop repeatedly until completion.
+
+### Loop Iteration Steps
+
+**Step 1: Evaluate Current State**
+
+Read your current state:
+- What todos are completed? (check TodoWrite)
+- What's currently in_progress? (should be exactly one)
+- What subagent outputs are available? (check file paths from completed delegations)
+- What's the user's original objective? (refer back to initial request)
+
+**Step 2: Check Completion**
+
+Ask: Are we done?
+
+**Done criteria:**
+- All information gathering complete
+- All findings synthesized
+- Ready to report comprehensive answer to user
+- All todos except "Report results" are completed
+
+**If done:**
+1. Mark final todo as `in_progress`
+2. Summarize findings for user
+3. Include file paths to detailed reports
+4. Mark final todo as `completed`
+5. Stop (do not continue loop)
+
+**If not done:** Proceed to Step 3
+
+**Step 3: Determine Next Action**
+
+Use hybrid decision model (gates + reasoning):
+
+**Apply Process Gates:**
+- Gate 1: Do I understand requirements? If no → clarify with AskUserQuestion
+- Gate 2: Do I have completion criteria? If no → define them now
+- Gate 3: Am I following sequential flow? Check workflow order
+
+**Reasoning within gates:**
+- What information is missing?
+- Which agent can gather it?
+- Do I need to read previous outputs first?
+- Have I identified gaps in gathered information?
+
+**Common decision patterns:**
+- Need external info + haven't searched yet → spawn web-research
+- Need codebase understanding + haven't indexed yet → spawn context-indexing
+- Have agent outputs + haven't read them yet → Read the files
+- Read outputs + found gaps → spawn additional research
+- Read outputs + sufficient info + haven't synthesized → synthesize now
+- Synthesized findings + ready to report → report to user
+
+**Step 4: Execute Action**
+
+Take the determined action:
+
+**If spawning subagent:**
+1. Update TodoWrite: mark delegation task as `in_progress`
+2. Use Task tool with appropriate subagent_type
+3. Wait for subagent to complete and return
+
+**If reading files:**
+1. Update TodoWrite: mark reading task as `in_progress`
+2. Use Read tool on the file path
+3. Mark reading task as `completed`
+
+**If asking user:**
+1. Use AskUserQuestion to clarify
+2. Update understanding based on response
+
+**If synthesizing:**
+1. Update TodoWrite: mark synthesis task as `in_progress`
+2. Analyze all gathered information
+3. Identify key findings, patterns, gaps
+4. Mark synthesis as `completed`
+
+**If reporting:**
+1. Covered in Step 2 (completion criteria)
+
+**Step 5: Update State**
+
+Update TodoWrite immediately after action completes:
+- Mark completed tasks as `completed`
+- Mark next task as `in_progress`
+- Keep state current
+
+**Step 6: Repeat**
+
+Go back to Step 1 (Evaluate Current State)
+
+### Loop Boundaries
+
+**Maximum iterations:** No hard limit, but typical workflow should complete in 5-10 iterations
+
+**Iteration examples:**
+1. Evaluate → Not done → Spawn web-research → Update state → Repeat
+2. Evaluate → Read research output → Update state → Repeat
+3. Evaluate → Spawn context-indexing → Update state → Repeat
+4. Evaluate → Read context output → Update state → Repeat
+5. Evaluate → Synthesize findings → Update state → Repeat
+6. Evaluate → Done → Report → Stop
+
+**Infinite loop prevention:**
+- Each iteration must make progress (spawn agent, read file, synthesize, or report)
+- If you cannot determine next action, STOP and report to user
+- Never repeat the same action twice without progress
