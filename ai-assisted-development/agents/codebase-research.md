@@ -79,6 +79,8 @@ Follow these steps in order. Do not skip steps.
    - docs/overview.md, docs/guide.md
 
 3. Read 2-3 most important documentation files found
+   - **Execute Read operations in parallel** by calling multiple Read tools in a single message
+   - Reading 3 docs in parallel is more efficient than 3 sequential reads
 
 4. Read one manifest file (if exists):
    - package.json (Node.js)
@@ -87,6 +89,7 @@ Follow these steps in order. Do not skip steps.
    - go.mod (Go)
    - pom.xml or build.gradle (Java)
    - Captures dependencies, scripts, metadata
+   - Can be read in parallel with documentation files
 
 **Stage 2: Code Discovery** (Strategic exploration)
 
@@ -97,6 +100,7 @@ Follow these steps in order. Do not skip steps.
    - "plugin", "api", "interface", "config", "architecture"
    - "router", "handler", "controller", "service"
    - Use Grep tool to identify promising files
+   - **Execute multiple Grep searches in parallel** for efficiency
 
 3. Grep for integration patterns:
    - Main entry points: "main", "index", "app"
@@ -104,6 +108,12 @@ Follow these steps in order. Do not skip steps.
    - Configuration loaders
 
 4. Identify 2-3 key code files worth reading based on matches
+
+**Reasoning Checkpoint:** After Stage 2, explicitly state:
+- What files you identified as high-value targets
+- Why these files appear architecturally significant
+- What questions you expect them to answer
+- Whether you have enough signals to proceed or need additional searches
 
 **Stage 3: Selective Deep Read** (Controlled token spend)
 
@@ -128,6 +138,9 @@ Follow these steps in order. Do not skip steps.
 - Use Grep to find, don't read everything
 - Read selectively based on signals
 - Stop when sufficient for template filling
+- **Approximate token budget**: ~10K tokens for documentation, ~5K for code files, ~2K for manifests
+- **Context rot awareness**: Model recall decreases as token count increases - prioritize quality over quantity
+- **Parallel tool execution**: Batch independent Glob/Grep operations in single message for efficiency
 
 **Before proceeding:** Review gathered information. Do you have enough to fill all template sections?
 
@@ -146,6 +159,8 @@ Fill the following sections using Edit tool:
 2. **Executive Summary:**
    - `[REQUIRED: 2-3 paragraph overview...]` → comprehensive summary of codebase
    - Should be 2-3 paragraphs covering purpose, architecture approach, key characteristics
+   - **Example of good summary**: "ProjectX is a distributed task queue system built on Redis and Python. It implements a producer-consumer architecture with priority-based scheduling and automatic retry mechanisms. The codebase emphasizes reliability through comprehensive test coverage and graceful degradation patterns."
+   - **Anti-pattern**: Bulleted lists, vague descriptions like "uses modern architecture", or merely listing technologies without explaining how they're used
 
 3. **Overview:**
    - `[REQUIRED: What the project does]` → 1-2 sentence purpose
@@ -154,6 +169,8 @@ Fill the following sections using Edit tool:
 
 4. **Tech Stack:**
    - `[REQUIRED: Bulleted list...]` → bulleted list of tech names only
+   - **Format example**: "- Python 3.11", "- Redis 7.x", "- FastAPI", "- Pytest"
+   - **Anti-pattern**: Descriptions or explanations in this section (save those for Architecture Patterns)
 
 5. **Architecture Patterns:**
    - `[REQUIRED: High-level architectural patterns...]` → observed patterns
@@ -221,9 +238,12 @@ If any item is incomplete, fix it now before validation.
    - File not found
 
 3. If error is retryable:
+   - **Analyze the error**: Explicitly state what went wrong and why
+   - **Plan the fix**: Describe what changes will address the error before making them
    - Make edits to fix the reported errors
    - Re-run validation script
    - Proceed based on result (pass → Step 6 success, fail → Step 6 failure)
+   - **Learn from errors**: Use validation feedback to improve understanding of template requirements
 
 4. If error is non-retryable:
    - Skip retry, go directly to Step 6 (Report Failure)

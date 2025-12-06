@@ -46,6 +46,8 @@ Research strategy:
 - Read specific documentation pages, READMEs
 - For repositories: Focus on README, main documentation, example code only
 - DO NOT attempt deep codebase analysis or local file exploration
+- **Execute searches in parallel**: Batch multiple WebSearch queries in single message for efficiency
+- **Parallel fetching**: When you have multiple promising URLs, fetch them in parallel with multiple WebFetch calls
 
 Source organization:
 - Official Documentation (vendor docs, official guides)
@@ -70,11 +72,31 @@ For each source, capture:
 - **Activity**: Stars + last commit for repos, N/A for docs
 - **Key points**: Bulleted list of important findings
 
+**Example of well-formatted source:**
+```
+- **Source**: Async Python Best Practices
+  **URL**: https://docs.python.org/3/library/asyncio.html
+  **Author**: Python Software Foundation
+  **Date**: 2025-11
+  **Activity**: N/A
+  **Key points**:
+    - Event loop is central to asyncio design
+    - async/await syntax preferred over callbacks
+    - Use asyncio.create_task() for concurrent execution
+```
+
 Efficiency guidelines:
 - Work efficiently - comprehensive but not exhaustive
 - Target 5-10 high-quality sources per category
 - Stop when sufficient information gathered for decision-making
 - Quality over quantity
+
+**Reasoning Checkpoint:** After initial research phase, explicitly state:
+- What key findings emerged from official documentation
+- Which repositories provide the strongest real-world evidence
+- What gaps remain in your understanding
+- Whether you have sufficient coverage across all three source categories (official, repos, community)
+- Whether additional targeted searches would add significant value
 
 **Before proceeding:** Review your sources. Do they answer the core research questions? Do you have coverage across official docs, repos, and community sources?
 
@@ -93,6 +115,8 @@ Fill the following sections:
 2. **Executive Summary:**
    - `[REQUIRED: 2-3 paragraph overview of key findings]` → synthesis of findings
    - Should be 2-3 paragraphs summarizing key insights
+   - **Example of good summary**: "Research into async Python patterns reveals three dominant approaches in production systems: asyncio with aiohttp for HTTP-heavy workloads, Celery for distributed task queues, and FastAPI for modern web services. Official documentation from Python.org emphasizes the event loop model, while production repositories demonstrate that hybrid sync/async architectures are common in practice."
+   - **Anti-pattern**: Bulleted lists, simple aggregation of sources without synthesis, or vague statements like "there are many approaches"
 
 3. **Findings Sections:**
    - `[REQUIRED: Official sources with standardized metadata...]` → actual official documentation sources
@@ -161,9 +185,12 @@ If any item is incomplete, fix it now before validation.
    - File not found
 
 3. If error is retryable:
+   - **Analyze the error**: Explicitly state what went wrong and why
+   - **Plan the fix**: Describe what changes will address the error before making them
    - Make edits to fix the reported errors
    - Re-run validation script
    - Proceed based on result (pass → Step 5 success, fail → Step 5 failure)
+   - **Learn from errors**: Use validation feedback to improve understanding of template requirements
 
 4. If error is non-retryable:
    - Skip retry, go directly to Step 5 (Report Failure)
