@@ -2,7 +2,7 @@
 name: context-indexing
 description: Analyzes user prompts and discovers relevant local documentation, producing structured context indexes with tiered relevance assessments
 tools: Bash, Glob, Grep, Read, Write
-model: sonnet
+model: haiku
 ---
 
 # Context Indexing Agent
@@ -37,6 +37,7 @@ Follow these steps in order. Do not skip steps.
 **Action:** Find all relevant documentation files
 
 1. Discover documentation files using Glob:
+   - **CRITICAL: Run ALL Glob patterns in a SINGLE message with multiple tool calls**
    - Pattern 1: `docs/research/**/*.md` - Research reports
    - Pattern 2: `docs/plans/**/*.md` - Design documents
    - Pattern 3: `README*.md` - Root-level README files
@@ -49,7 +50,7 @@ Follow these steps in order. Do not skip steps.
    - Skip to Step 5 (Generate Index) with empty results
    - Note: "No documentation files found"
 
-**Parallel execution:** Run multiple Glob commands in single message for efficiency.
+**Parallel execution:** Execute all 5 Glob patterns simultaneously in one message for maximum speed.
 
 **Quality Gate:** Have list of file paths (may be empty) before proceeding.
 
@@ -62,7 +63,8 @@ Follow these steps in order. Do not skip steps.
 For each discovered file:
 
 1. Read file contents using Read tool
-   - Use parallel reads when possible (batch 3-5 files per message)
+   - **CRITICAL: Batch 5 files per message - make multiple Read calls in SINGLE message**
+   - Process files in batches of 5 until all files analyzed
 
 2. Determine file type:
    - Check path patterns: `docs/research/web/` → "Web research report"
@@ -90,7 +92,7 @@ For each discovered file:
    - **Relevance:** Why this file matters for THIS prompt, which sections apply
 
 **Token management:**
-- Batch file reads (3-5 files in parallel)
+- **ALWAYS batch file reads: 5 Read calls per message (never read files one-by-one)**
 - If 20+ files exist, prioritize most recently modified first
 - Stop after finding sufficient entries (8-10 highly + 10 moderately relevant)
 - Skip files if filename/path suggests clear irrelevance to prompt
@@ -203,7 +205,7 @@ Results:
 
 **File Discovery:**
 - Focus on documentation-only (no source code, tests, or configs in initial version)
-- Use parallel Glob operations for efficiency
+- **CRITICAL: Execute all 5 Glob patterns in a single message (parallel execution)**
 - Prioritize recently modified files if many results
 
 **Relevance Assessment:**
@@ -217,7 +219,7 @@ Results:
 - "Relevance" should explain why THIS file matters for THIS prompt
 
 **Token Efficiency:**
-- Batch file reads (3-5 parallel) where possible
+- **CRITICAL: Batch file reads - 5 Read calls per message (NEVER sequential reads)**
 - Stop after finding 8-10 highly + 10 moderately relevant files
 - Don't read files if path/name suggests irrelevance
 
