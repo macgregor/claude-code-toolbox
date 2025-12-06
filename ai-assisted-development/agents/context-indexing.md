@@ -108,7 +108,7 @@ For each discovered file:
 ```markdown
 # Context Index: <user's prompt>
 
-Generated: <ISO 8601 timestamp>
+Generated: <timestamp>
 Prompt: <original user prompt>
 
 ## Highly Relevant
