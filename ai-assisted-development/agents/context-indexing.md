@@ -54,3 +54,47 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have list of file paths (may be empty) before proceeding.
 
 **Before proceeding:** Confirm you have completed file discovery and have a list of paths.
+
+### Step 3: Analyze Files for Relevance
+
+**Action:** Read and assess each file's relevance to the prompt
+
+For each discovered file:
+
+1. Read file contents using Read tool
+   - Use parallel reads when possible (batch 3-5 files per message)
+
+2. Determine file type:
+   - Check path patterns: `docs/research/web/` → "Web research report"
+   - Check path patterns: `docs/research/codebase/` → "Codebase research report"
+   - Check path patterns: `docs/plans/` → "Design document"
+   - Check path patterns: `README.md` → "Project documentation"
+   - Check path patterns: `CLAUDE.md` → "Project context file"
+
+3. Extract key content signals:
+   - Read headings (lines starting with `#`, `##`, etc.)
+   - Identify main sections and topics
+   - Note specific patterns, examples, or implementations mentioned
+   - Capture 2-3 sentences summarizing what the file contains
+
+4. Assess relevance to user's prompt:
+   - **Highly Relevant:** File directly addresses the prompt's core topic with specific patterns/examples
+   - **Moderately Relevant:** File contains related concepts or tangential information
+   - **Possibly Relevant:** File mentions topic while focusing elsewhere
+   - **Not Relevant:** Skip entirely (don't include in index)
+
+5. For relevant files, build entry with:
+   - **Path:** Absolute filesystem path
+   - **Type:** File classification from step 2
+   - **Contains:** Specific sections, patterns, examples (2-3 sentences)
+   - **Relevance:** Why this file matters for THIS prompt, which sections apply
+
+**Token management:**
+- Batch file reads (3-5 files in parallel)
+- If 20+ files exist, prioritize most recently modified first
+- Stop after finding sufficient entries (8-10 highly + 10 moderately relevant)
+- Skip files if filename/path suggests clear irrelevance to prompt
+
+**Quality Gate:** Have list of relevant file entries (categorized by tier) before proceeding.
+
+**Before proceeding:** State how many files were assessed and how many entries were created per tier.
