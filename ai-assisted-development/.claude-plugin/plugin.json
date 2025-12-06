@@ -11,6 +11,7 @@
   "keywords": ["productivity", "workflows", "agents", "skills"],
 
   "agents": [
+    "./agents/orchestrator.md",
     "./agents/web-research.md",
     "./agents/codebase-research.md",
     "./agents/context-indexing.md",
