@@ -180,3 +180,63 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have filtered candidate learnings list (may be empty) before proceeding.
 
 **Before proceeding:** Confirm you have filtered patterns and built candidate learnings list.
+
+### Step 5: Analyze CLAUDE.md for Inconsistencies
+
+**Action:** Detect and prepare fixes for inconsistencies
+
+1. Read current CLAUDE.md:
+   - Use Read tool to load entire file
+   - Parse into sections (split on `## ` headers)
+   - Extract all directives: lines containing "always", "never", "must", "don't", "should"
+
+2. Detect contradictory guidance:
+   - Cross-reference all directive statements
+   - Flag conflicts:
+     - Direct negation: "always use X" vs "never use X" or "don't use X"
+     - Mutually exclusive: "prefer A" vs "prefer B" for same use case
+     - Conflicting workflows: different required steps for same task
+   - For each conflict, determine resolution:
+     - **Keep more specific**: If one has context conditions, keep that version
+     - **Merge with context**: Both valid in different contexts → combine
+     - **Prefer recent evidence**: New learnings contradict old → update old
+     - **Remove if unresolvable**: Mark with TODO comment for human review
+
+3. Validate file/path references:
+   - Extract all file paths mentioned (look for patterns like `path/to/file.ext`)
+   - For each path:
+     - Check existence: `test -e <path> && echo "exists" || echo "missing"`
+     - For missing paths, fuzzy search similar: `find . -name "*<basename>*" -type f | head -5`
+   - Determine fix:
+     - **Remove if obsolete**: No similar file found
+     - **Update path**: Similar file exists with high confidence
+     - **Mark deprecated**: Uncertain, add "(deprecated)" marker
+
+4. Detect vague guidance:
+   - Flag guidance patterns:
+     - "Be careful with..." without specifics
+     - "Best practice" without explaining why/when
+     - "This" or "that" without clear referent
+     - High-level advice without concrete examples
+   - For each vague item:
+     - Check if recent evidence provides concrete examples
+     - If yes: Prepare enhancement with specifics
+     - If no: Prepare removal
+
+5. Build fixes list:
+   - For each inconsistency:
+     - **Type**: contradiction, outdated-reference, vague-guidance
+     - **Line range**: Where in CLAUDE.md
+     - **Old text**: Exact text to replace
+     - **New text**: Corrected version
+     - **Reason**: Why this fix is being made
+   - Sort fixes by line number (apply from bottom to top to preserve line numbers)
+
+6. Check candidate learnings for contradictions:
+   - Cross-reference candidate learnings (from Step 4) against existing CLAUDE.md
+   - Remove any candidates that contradict existing guidance
+   - Flag candidates that enhance/refine existing guidance
+
+**Quality Gate:** Have fixes list and validated candidate learnings before proceeding.
+
+**Before proceeding:** Confirm you have analyzed CLAUDE.md and prepared fixes.
