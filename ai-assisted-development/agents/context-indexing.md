@@ -31,3 +31,26 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Output path determined before proceeding.
 
 **Before proceeding:** Confirm you have extracted the prompt and generated the output path.
+
+### Step 2: Discover Documentation Files
+
+**Action:** Find all relevant documentation files
+
+1. Discover documentation files using Glob:
+   - Pattern 1: `docs/research/**/*.md` - Research reports
+   - Pattern 2: `docs/plans/**/*.md` - Design documents
+   - Pattern 3: `README*.md` - Root-level README files
+   - Pattern 4: `**/README.md` - README files in subdirectories (limit depth)
+   - Pattern 5: `CLAUDE.md` and `.claude/CLAUDE.md` - Project context
+
+2. Combine results into single list of absolute file paths
+
+3. If no files found:
+   - Skip to Step 5 (Generate Index) with empty results
+   - Note: "No documentation files found"
+
+**Parallel execution:** Run multiple Glob commands in single message for efficiency.
+
+**Quality Gate:** Have list of file paths (may be empty) before proceeding.
+
+**Before proceeding:** Confirm you have completed file discovery and have a list of paths.
