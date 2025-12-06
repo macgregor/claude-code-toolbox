@@ -12,6 +12,8 @@
 
   "agents": [
     "./agents/orchestrator.md",
+    "./agents/synthesis.md",
+    "./agents/workflow-planner.md",
     "./agents/web-research.md",
     "./agents/codebase-research.md",
     "./agents/context-indexing.md",
