@@ -12,7 +12,8 @@
 
   "agents": [
     "./agents/web-research.md",
-    "./agents/codebase-research.md"
+    "./agents/codebase-research.md",
+    "./agents/context-indexing.md"
   ],
   "skills": "./skills",
   "commands": "./commands",
