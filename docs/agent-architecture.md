@@ -29,6 +29,58 @@ Agent executes complete workflow
 Results return to user
 ```
 
+## Orchestration Layer
+
+The orchestrator agent coordinates multi-step workflows by delegating work to specialized agents.
+
+**Orchestrator** (`ai-assisted-development:orchestrator`)
+- Executes control loop: evaluate state → check completion → determine action → execute → repeat
+- Enforces process gates (understand before acting, define completion criteria)
+- Uses TodoWrite for state tracking and user visibility
+- Spawns research agents via Task tool based on information needs
+- Synthesizes results from multiple agents
+
+**Orchestration Flow**
+
+```
+User: /ai-assisted-development:start "Research auth patterns"
+  ↓
+Start command → Orchestrator agent
+  ↓
+Orchestrator creates workflow in TodoWrite
+  ↓
+Loop:
+  - Evaluates what information is needed
+  - Spawns subagent (web-research, codebase-research, etc.)
+  - Reads subagent output file
+  - Determines if more research needed
+  - Synthesizes findings when complete
+  ↓
+Reports results to user
+```
+
+**Subagents in Orchestration**
+
+Specialized agents (web-research, codebase-research, context-indexing, lessons-learned) act as worker agents:
+- Orchestrator spawns them via Task tool when specific information is needed
+- Each writes output to file (`docs/research/web/*.md`, `docs/research/codebase/*.md`)
+- Orchestrator reads their outputs to inform next decisions
+- Sequential execution in v1 (gather → synthesize → report)
+
+**Why Orchestration**
+
+Without orchestration, users manually:
+- Decide which agents to invoke
+- Determine what order to run them
+- Know when enough information is gathered
+- Synthesize results from multiple sources
+
+With orchestration:
+- Process discipline enforced automatically (understand → plan → execute)
+- Multi-agent workflows coordinated systematically
+- State tracked transparently via TodoWrite
+- Fail-fast on errors (let user decide next steps)
+
 ## Why Two Layers (Not Three)
 
 Initial design included a skill layer that agents would invoke via Skill tool. We removed it because:
@@ -115,6 +167,12 @@ For new agents:
 
 ## Examples
 
+**Orchestrator Agent**: Coordinates multi-step workflows with specialized agents
+- Agent: Control loop evaluates state, enforces process gates, delegates to subagents
+- State: TodoWrite tracks workflow progression
+- No template/validation (doesn't produce documents directly)
+- Command: `/ai-assisted-development:start <objective>`
+
 **Web Research Agent**: Gathers documentation and examples, produces structured reports
 - Agent: Search web, fetch pages, organize by source type, fill template, validate
 - Template: Standardized research report with metadata
@@ -128,4 +186,5 @@ For new agents:
 
 ## Reference
 
-Full design rationale: `docs/plans/2025-12-05-simplified-web-research-design.md`
+**Orchestration design**: `docs/plans/2025-12-06-orchestrator-design.md`
+**Agent pattern design**: `docs/plans/2025-12-05-simplified-web-research-design.md`
