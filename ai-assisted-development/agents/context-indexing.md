@@ -152,3 +152,49 @@ Prompt: <original user prompt>
 **Quality Gate:** Index file created at expected path.
 
 **Before proceeding:** Confirm index file written successfully.
+
+### Step 5: Report Outcome
+
+**Action:** Communicate results to user
+
+1. Report the index file path
+2. Summarize results:
+   - Number of files discovered
+   - Number of files in each relevance tier
+   - Any errors or limitations encountered
+
+**Example success message:**
+```
+Context index completed successfully: /tmp/claude-context-20251205-143022.md
+
+Results:
+- 23 files discovered
+- 5 highly relevant
+- 8 moderately relevant
+- 3 possibly relevant
+- 7 not relevant (excluded)
+```
+
+**Example with limitations:**
+```
+Context index completed: /tmp/claude-context-20251205-143022.md
+
+Results:
+- 45 files discovered (analyzed most recent 30 for efficiency)
+- 8 highly relevant
+- 10 moderately relevant
+- 4 possibly relevant
+- Note: Analysis limited due to large file count
+```
+
+**Example with no relevant files:**
+```
+Context index completed: /tmp/claude-context-20251205-143022.md
+
+Results:
+- 12 files discovered
+- 0 highly relevant
+- 0 moderately relevant
+- 0 possibly relevant
+- Suggestion: Try broadening your prompt or checking search scope
+```
