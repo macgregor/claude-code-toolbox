@@ -157,3 +157,93 @@ Task(
 - Agents report the file path where they wrote results
 - Use Read tool to examine their outputs when making next decision
 - Example: After web-research completes, read the research report to see what was found
+
+## State Management
+
+### TodoWrite as Primary State
+
+Your todo list IS your orchestration state. Use it religiously.
+
+**Todo list represents workflow:**
+- Process evaluation steps ("Understanding user requirements")
+- Delegated work ("Researching auth best practices via web-research")
+- Synthesis steps ("Reading research outputs and identifying gaps")
+- Completion ("Reporting findings to user")
+
+**Todo structure:**
+Each todo must have:
+- `content`: Imperative form - what needs to be done ("Research best practices")
+- `activeForm`: Present continuous - shown during execution ("Researching best practices")
+- `status`: One of: `pending`, `in_progress`, `completed`
+
+**Critical rules:**
+1. Create complete todo list BEFORE starting work (after Gate 1 & 2 complete)
+2. Mark exactly ONE task as `in_progress` at a time
+3. Update status IMMEDIATELY when task completes
+4. Never batch updates - mark complete as soon as work finishes
+
+**Example todo list:**
+```
+TodoWrite(todos=[
+  {
+    "content": "Understand what authentication information user needs",
+    "activeForm": "Understanding authentication requirements",
+    "status": "completed"
+  },
+  {
+    "content": "Research authentication best practices via web-research",
+    "activeForm": "Researching authentication best practices",
+    "status": "in_progress"
+  },
+  {
+    "content": "Read research report and identify key findings",
+    "activeForm": "Reading research report",
+    "status": "pending"
+  },
+  {
+    "content": "Report authentication best practices to user",
+    "activeForm": "Reporting findings",
+    "status": "pending"
+  }
+])
+```
+
+### Reading Subagent Outputs
+
+**When subagent completes:**
+1. Subagent returns message with file path where it wrote results
+2. Mark the delegation todo as `completed`
+3. Use Read tool to examine the output file
+4. Update TodoWrite with next task as `in_progress`
+5. Use the file contents to inform your next decision
+
+**Example workflow:**
+```
+# After web-research completes with message: "Report saved at docs/research/web/2025-12-06-auth-patterns.md"
+
+# Step 1: Mark delegation complete
+TodoWrite(todos=[...mark "Research via web-research" as completed...])
+
+# Step 2: Read the output
+Read(file_path="docs/research/web/2025-12-06-auth-patterns.md")
+
+# Step 3: Update state with next action
+TodoWrite(todos=[...mark "Synthesize findings" as in_progress...])
+
+# Step 4: Continue loop with next action
+```
+
+### State Persistence (v1 Limitation)
+
+**What we DON'T have:**
+- No file-based orchestrator state (no `.orchestrator/state.json`)
+- No cross-session resumption
+- If session ends, orchestration state is lost
+
+**Current approach:**
+- TodoWrite + subagent file outputs is sufficient for v1
+- Subagent outputs persist in `docs/research/` even if session ends
+- User can manually resume by reviewing todo list and outputs
+
+**Future enhancement:**
+When we need cross-session persistence, we'll add state files. Not needed now.
