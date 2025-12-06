@@ -288,3 +288,39 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** CLAUDE.md updated with fixes and learnings applied.
 
 **Before proceeding:** Confirm you have successfully updated CLAUDE.md.
+
+### Step 7: Report Changes
+
+**Action:** Show what was done and summarize results
+
+1. Show git diff:
+   - Command: `git diff CLAUDE.md`
+   - Display full diff to show all changes made
+
+2. Summarize changes:
+   - **Analysis period**: From [date] to [date] (N days)
+   - **Evidence sources**:
+     - Git: N commits analyzed
+     - Conversations: N session files analyzed
+   - **Inconsistencies fixed**:
+     - Contradictions: N fixed
+     - Outdated references: N updated/removed
+     - Vague guidance: N enhanced/removed
+   - **New learnings added**:
+     - By category: List categories and count per category
+     - Total patterns added: N
+
+3. Handle edge cases:
+   - **No changes**: "No new learnings identified and no inconsistencies found since [date]"
+   - **Only fixes**: "Fixed N inconsistencies, no new learnings identified"
+   - **Only learnings**: "Added N learnings, no inconsistencies found"
+   - **Git-only mode**: Note "conversation history unavailable, analysis based on git commits only"
+
+4. Next steps recommendation:
+   - Suggest reviewing changes: `git diff CLAUDE.md`
+   - If substantial changes: Suggest testing with a simple task to verify guidance clarity
+   - Remind: Changes tracked in git, easily reversible if needed
+
+**Quality Gate:** Summary report provided to user.
+
+**Before proceeding:** Confirm you have displayed diff and summary.
