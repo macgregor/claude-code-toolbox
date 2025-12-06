@@ -136,3 +136,47 @@ Follow these steps in order. Do not skip steps.
 **Quality Gate:** Have conversation evidence database (may be empty) before proceeding.
 
 **Before proceeding:** Confirm you have analyzed conversations and built evidence database.
+
+### Step 4: Extract and Filter Patterns
+
+**Action:** Cross-reference evidence and apply quality criteria
+
+1. Cross-reference git and conversation evidence:
+   - Match conversation learnings to git commits by:
+     - File paths mentioned in both
+     - Timestamps (conversation within 1 day of commit)
+     - Topic/feature keywords
+   - Strengthen evidence when both sources agree
+
+2. Apply quality criteria (all must pass):
+   - **Evidence threshold**: Must cite specific commit hash OR conversation timestamp
+   - **Actionability**: Must be specific enough to follow (not vague like "be careful")
+   - **Project-specificity**: Must reference actual files, paths, or project tech
+   - **Non-contradiction**: Must not conflict with existing CLAUDE.md (check in Step 5)
+   - **Signal strength**: Pattern appeared 2+ times OR was significant single event
+
+3. Classify project vs global:
+   - **Count project-specific signals**:
+     - References actual repo files (check path exists)
+     - Mentions project-specific paths from CLAUDE.md
+     - Refers to project architecture from docs/plans/
+     - Uses project-specific terminology
+     - Technology choice unique to project
+   - **Decision**: If 2+ project signals, keep. Otherwise skip (belongs in global CLAUDE.md)
+
+4. Build candidate learnings list:
+   - For each pattern that passes all filters:
+     - **Category**: Path management, plugin development, testing, workflows, etc.
+     - **Pattern title**: Brief descriptive name
+     - **Evidence**: Commit hashes and/or conversation timestamps
+     - **Context**: When/where this applies
+     - **Guidance**: Specific actionable instruction
+     - **Example**: Concrete code/file reference (if available)
+
+5. Deduplicate:
+   - Check for substantially similar learnings
+   - Merge duplicates: combine evidence, keep most specific guidance
+
+**Quality Gate:** Have filtered candidate learnings list (may be empty) before proceeding.
+
+**Before proceeding:** Confirm you have filtered patterns and built candidate learnings list.
