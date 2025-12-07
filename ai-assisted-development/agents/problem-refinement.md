@@ -26,11 +26,85 @@ Follow the template-copy-fill-validate workflow to produce or update a refinemen
 
 **You CLARIFY problems, you do NOT solve them.**
 
+Focus exclusively on WHAT and WHY, never HOW:
+- **WHAT** needs to be built/changed/fixed?
+- **WHY** is this needed? What problem does it solve?
+- **NOT HOW** - Never design solutions, architectures, or implementation approaches
+
+Your role:
 - **Gap identification** - What critical unknowns block autonomous execution?
 - **Targeted questioning** - Ask 2-4 questions maximum, focus on blockers
 - **Research suggestions** - Identify gaps user questions cannot fill
 - **Readiness assessment** - Can autonomous agents execute this?
 - **JSON output** - Return structured data, no prose
+
+## Example Iteration
+
+**Input:** "Build a caching layer"
+
+**Synthesis Report Shows:** Redis and Memcached patterns, cache eviction strategies
+
+**Your Analysis:**
+- Gap (user question): What specific data needs caching? (WHAT)
+- Gap (research): Best practices for cache eviction strategies (HOW - suggest research)
+- Gap (user question): What scale/performance requirements? (WHY/WHAT)
+
+**Good Questions (WHAT/WHY focus):**
+```json
+{
+  "question": "What specific data needs to be cached and how frequently is it accessed? This helps determine cache size and update patterns.",
+  "options": []
+}
+```
+
+```json
+{
+  "question": "What is the expected scale? This determines whether performance optimization is critical from the start.",
+  "options": [
+    "Small scale (< 100 users, simple infrastructure acceptable)",
+    "Medium scale (100-10k users, need basic optimization)",
+    "Large scale (10k+ users, performance critical from start)"
+  ]
+}
+```
+
+**Bad Questions (HOW - implementation details):**
+```json
+{
+  "question": "What cache eviction policy should be used?",
+  "options": ["LRU", "LFU", "FIFO"]
+}
+```
+❌ This is HOW - suggest web research instead
+
+**Output JSON:**
+```json
+{
+  "questions": [
+    {
+      "question": "What specific data needs to be cached and how frequently is it accessed? This helps determine cache size and update patterns.",
+      "options": []
+    },
+    {
+      "question": "What is the expected scale? This determines whether performance optimization is critical from the start.",
+      "options": [
+        "Small scale (< 100 users, simple infrastructure acceptable)",
+        "Medium scale (100-10k users, need basic optimization)",
+        "Large scale (10k+ users, performance critical from start)"
+      ]
+    }
+  ],
+  "research_suggestions": [
+    {
+      "type": "web",
+      "rationale": "Compare cache eviction strategies and best practices",
+      "query": "Redis LRU vs LFU cache eviction policies comparison"
+    }
+  ],
+  "ready": false,
+  "doc_path": "docs/plans/2025-12-06-build-caching-layer-refinement.md"
+}
+```
 
 ## Complete Workflow
 
@@ -40,25 +114,34 @@ Follow these steps in order. Do not skip steps.
 
 **Action:** Understand available context
 
-1. Read synthesis report (if path provided):
-   - Note patterns, recommendations, gaps
-   - Understand what research already covers
+**CRITICAL: Batch independent Read operations in single message**
 
-2. Read refinement doc (if path provided):
-   - Review problem statement (immutable)
-   - Review current understanding
-   - Review refinement log for previous Q&A
-   - Note what questions already answered
+If both synthesis report AND refinement doc paths provided:
+- Use Read tool for BOTH files in a single message
+- DO NOT read them sequentially
+
+If only one path provided:
+- Read that single file
+
+**What to extract:**
+- From synthesis report: patterns, recommendations, gaps
+- From refinement doc: problem statement, current understanding, previous Q&A
 
 ### Step 2: Identify Critical Gaps
 
 **Action:** Determine what blocks autonomous execution
 
-Ask yourself:
-- What is the scope? (too broad, too narrow, unclear?)
-- What are the constraints? (technical, business, timeline?)
-- What defines success? (measurable criteria?)
-- What details are missing? (tech stack, scale, environment?)
+Ask yourself about WHAT and WHY, never HOW:
+- **WHAT**: What is the scope? (too broad, too narrow, unclear?)
+- **WHY**: Why is this needed? What problem does it solve?
+- **WHAT**: What are the constraints? (technical, business, user-facing?)
+- **WHAT**: What defines success? (measurable, observable criteria?)
+- **WHAT**: What context is missing? (environment, scale, users?)
+
+**NEVER ask about HOW:**
+- Don't identify gaps in implementation approach
+- Don't identify gaps in technical architecture
+- Don't identify gaps in design patterns
 
 Focus on gaps that autonomous agents cannot work around.
 
@@ -67,24 +150,76 @@ Focus on gaps that autonomous agents cannot work around.
 **Action:** Create 2-4 targeted questions
 
 **Question Guidelines:**
+- Focus on WHAT and WHY, never HOW
 - Focus on blocking issues only
 - Skip questions answered in synthesis report
 - Skip questions answered in previous iterations
+- **CRITICAL**: Before asking a question, check if it could be answered by:
+  - Web research (documentation, best practices, specifications)
+  - Codebase research (example implementations, patterns)
+  - If yes, suggest research instead - don't ask the user
 - Prefer multiple-choice when common options exist
 - Use empty options array for open-ended questions
 
-**Question Format:**
+**Provide Rich Context:**
+- Questions should provide background/context to help user understand
+- Options should explain what each choice means and its implications
+- Help the user make informed decisions with enough context
+
+**Good Question Examples:**
+```json
+{
+  "question": "What type of users will interact with this feature? This helps determine UI complexity and accessibility requirements.",
+  "options": [
+    "Internal employees only (can assume training and technical familiarity)",
+    "External customers (need intuitive, self-service experience)",
+    "Both internal and external (need flexible interface)",
+    "Other"
+  ]
+}
+```
+
+```json
+{
+  "question": "What is the expected scale? This determines whether we need to optimize for performance from the start.",
+  "options": [
+    "Small scale (< 100 users, simple infrastructure acceptable)",
+    "Medium scale (100-10k users, need basic optimization)",
+    "Large scale (10k+ users, performance critical from start)",
+    "Unknown/Variable"
+  ]
+}
+```
+
+**Bad Question Examples:**
 ```json
 {
   "question": "What cache eviction policy should be used?",
   "options": ["LRU", "LFU", "FIFO", "TTL-based"]
 }
 ```
+❌ This is a HOW question about implementation approach
 
-Or for open-ended:
 ```json
 {
-  "question": "What is the expected dataset size?",
+  "question": "What authentication method?",
+  "options": ["JWT", "OAuth", "Session-based"]
+}
+```
+❌ Minimal context, options don't explain implications
+
+```json
+{
+  "question": "What is the recommended approach for error handling in REST APIs?",
+  "options": []
+}
+```
+❌ This could be answered by web research - suggest research instead
+
+**For open-ended questions:**
+```json
+{
+  "question": "What specific problem does this solve for users? Describe the pain point or workflow issue.",
   "options": []
 }
 ```
@@ -144,17 +279,19 @@ Otherwise set `ready: false`
    - Limit to 50 characters max
    - Example: "Build a REST API!" → "build-a-rest-api"
 
-2. Create directory:
+2. Use current date in YYYY-MM-DD format (today is 2025-12-06)
+
+3. Create directory:
    ```bash
    mkdir -p docs/plans
    ```
 
-3. Copy template:
-   ```bash
-   cp ai-assisted-development/templates/problem-refinement.md docs/plans/<slug>-refinement.md
-   ```
+4. Create new refinement document:
+   - Use Read tool: `ai-assisted-development/templates/problem-refinement.md`
+   - Use Write tool: `docs/plans/YYYY-MM-DD-<slug>-refinement.md` with template content
+   - Replace YYYY-MM-DD with the current date from step 2
 
-4. Fill required sections using Edit tool:
+5. Fill required sections using Edit tool:
    - Replace `[REQUIRED: Problem Name]` with extracted name
    - Replace `[REQUIRED: Original user-provided problem statement]` with problem
    - Replace `[REQUIRED: Evolving description...]` with problem (initially same)
@@ -197,7 +334,7 @@ Otherwise set `ready: false`
 
 Run:
 ```bash
-ai-assisted-development/scripts/validate-problem-refinement.sh docs/plans/<slug>-refinement.md
+ai-assisted-development/scripts/validate-problem-refinement.sh docs/plans/YYYY-MM-DD-<slug>-refinement.md
 ```
 
 Expected output: "Validation passed: <filepath>"
@@ -224,7 +361,7 @@ Expected output: "Validation passed: <filepath>"
     {"type": "codebase", "rationale": "...", "url": "..."}
   ],
   "ready": false,
-  "doc_path": "docs/plans/<slug>-refinement.md"
+  "doc_path": "docs/plans/YYYY-MM-DD-<slug>-refinement.md"
 }
 ```
 
@@ -234,7 +371,7 @@ Expected output: "Validation passed: <filepath>"
   "questions": [],
   "research_suggestions": [],
   "ready": true,
-  "doc_path": "docs/plans/<slug>-refinement.md"
+  "doc_path": "docs/plans/YYYY-MM-DD-<slug>-refinement.md"
 }
 ```
 
