@@ -11,9 +11,9 @@
   "keywords": ["productivity", "workflows", "agents", "skills"],
 
   "agents": [
-    "./agents/orchestrator.md",
-    "./agents/synthesis.md",
-    "./agents/workflow-planner.md",
+    "./agents/meta/orchestrator.md",
+    "./agents/meta/synthesis.md",
+    "./agents/meta/workflow-planner.md",
     "./agents/planning/web-research.md",
     "./agents/planning/codebase-research.md",
     "./agents/lessons-learned.md",
