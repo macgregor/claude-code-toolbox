@@ -43,10 +43,20 @@ Your role:
 **Input:** "Build a caching layer"
 
 **Synthesis Report Shows:** Redis and Memcached patterns, cache eviction strategies
+**Synthesis Sources:** docs/research/web/redis-patterns.md, docs/research/codebase/cache-implementations.md
 
-**Your Analysis:**
+**Initial Gaps Identified:**
+- Gap: What specific data needs caching? (WHAT)
+- Gap: Best practices for cache eviction strategies (HOW)
+- Gap: What scale/performance requirements? (WHY/WHAT)
+
+**Step 3: Consult Full Research**
+- Read redis-patterns.md and cache-implementations.md in parallel
+- Found: Detailed comparison of LRU vs LFU eviction policies with use cases
+- Gap resolved: "Best practices for cache eviction strategies" - answered in research docs
+
+**Remaining Gaps After Reading Research:**
 - Gap (user question): What specific data needs caching? (WHAT)
-- Gap (research): Best practices for cache eviction strategies (HOW - suggest research)
 - Gap (user question): What scale/performance requirements? (WHY/WHAT)
 
 **Good Questions (WHAT/WHY focus):**
@@ -68,14 +78,14 @@ Your role:
 }
 ```
 
-**Bad Questions (HOW - implementation details):**
+**Bad Questions (would have been asked without Step 3):**
 ```json
 {
   "question": "What cache eviction policy should be used?",
   "options": ["LRU", "LFU", "FIFO"]
 }
 ```
-❌ This is HOW - suggest web research instead
+❌ This is HOW and was answered by reading full research docs in Step 3 - don't ask!
 
 **Output JSON:**
 ```json
@@ -94,17 +104,12 @@ Your role:
       ]
     }
   ],
-  "research_suggestions": [
-    {
-      "type": "web",
-      "rationale": "Compare cache eviction strategies and best practices",
-      "query": "Redis LRU vs LFU cache eviction policies comparison"
-    }
-  ],
+  "research_suggestions": [],
   "ready": false,
   "doc_path": "docs/plans/2025-12-06-build-caching-layer-refinement.md"
 }
 ```
+Note: research_suggestions is empty because Step 3 already answered the HOW questions by reading full research docs
 
 ## Complete Workflow
 
@@ -145,19 +150,55 @@ Ask yourself about WHAT and WHY, never HOW:
 
 Focus on gaps that autonomous agents cannot work around.
 
-### Step 3: Generate Questions
+### Step 3: Consult Full Research Documents
 
-**Action:** Create 2-4 targeted questions
+**Action:** Before asking the user questions, check if existing research already answers your gaps
+
+**CRITICAL: The synthesis report is compressed - it may not contain all the details you need.**
+
+If a synthesis report was provided:
+
+1. **Extract source document list from synthesis:**
+   - Read the synthesis report (already read in Step 1)
+   - Look for the list of source documents (usually near the top or in a "Sources" section)
+   - Identify which documents are most relevant to your identified gaps
+
+2. **Determine which documents to read:**
+   - For each gap you identified, ask: "Which research docs might answer this?"
+   - Example gap: "What do AI agents need in output vs humans?"
+     - Relevant docs: context-engineering-*, agent-communication-*, multi-agent-*
+   - Example gap: "Where should detection happen in Claude Code workflow?"
+     - Relevant docs: claude-code-features-*, claude-code-agent-*
+   - Prioritize: Select 3-5 most relevant documents
+
+3. **Read selected documents in parallel:**
+   - **CRITICAL: Batch Read operations in single message**
+   - Use Read tool for 3-5 documents in ONE message
+   - DO NOT read them sequentially
+   - Focus on finding answers to your specific gaps
+
+4. **Reassess gaps after reading:**
+   - Which gaps are now answered? Remove them from your question list
+   - Which gaps remain unanswered? Keep for user questions
+   - Did you discover new information that changes the problem understanding?
+
+**If no synthesis report provided:**
+- Skip this step, proceed to Step 4
+
+### Step 4: Generate Questions
+
+**Action:** Create 2-4 targeted questions for gaps NOT answered by research
 
 **Question Guidelines:**
 - Focus on WHAT and WHY, never HOW
 - Focus on blocking issues only
 - Skip questions answered in synthesis report
 - Skip questions answered in previous iterations
+- **Skip questions answered in Step 3 by reading full research docs**
 - **CRITICAL**: Before asking a question, check if it could be answered by:
-  - Web research (documentation, best practices, specifications)
-  - Codebase research (example implementations, patterns)
-  - If yes, suggest research instead - don't ask the user
+  - NEW web research (documentation, best practices, specifications not in our docs)
+  - NEW codebase research (example implementations, patterns from external repos)
+  - If yes, suggest NEW research instead - don't ask the user
 - Prefer multiple-choice when common options exist
 - Use empty options array for open-ended questions
 
@@ -224,15 +265,16 @@ Focus on gaps that autonomous agents cannot work around.
 }
 ```
 
-### Step 4: Suggest Research
+### Step 5: Suggest Research
 
-**Action:** Identify gaps requiring research
+**Action:** Identify gaps requiring NEW research beyond what we already have
 
 **When to suggest research:**
-- Need to understand best practices
-- Need examples from existing codebases
-- Need technical specifications
+- Need to understand best practices NOT covered in existing research
+- Need examples from external codebases (not our research)
+- Need technical specifications not in our docs
 - User questions cannot provide this knowledge
+- **Existing research does not answer the gap** (already checked in Step 3)
 
 **Research Format:**
 ```json
@@ -254,7 +296,7 @@ Or:
 
 **Limits:** Suggest 1-3 research directions maximum
 
-### Step 5: Assess Readiness
+### Step 6: Assess Readiness
 
 **Action:** Determine if problem allows autonomous execution
 
@@ -266,7 +308,7 @@ Set `ready: true` with high confidence ONLY when:
 
 Otherwise set `ready: false`
 
-### Step 6: Update Refinement Document
+### Step 7: Update Refinement Document
 
 **Action:** Create or update problem refinement doc
 
@@ -328,7 +370,7 @@ Otherwise set `ready: false`
 
 4. Update Readiness Assessment
 
-### Step 7: Validate Output
+### Step 8: Validate Output
 
 **Action:** Run validation script
 
@@ -345,7 +387,7 @@ Expected output: "Validation passed: <filepath>"
 3. Re-run validation
 4. If fails twice, return error in JSON
 
-### Step 8: Return JSON Response
+### Step 9: Return JSON Response
 
 **Action:** Return structured response to command
 
