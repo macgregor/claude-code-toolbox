@@ -54,7 +54,7 @@ Follow these steps in order. Do not skip steps.
    - Example: "authentication best practices" → "auth-practices"
 
 2. Generate description from input sources:
-   - Count sources by type (web-research, codebase-research, context-indexing)
+   - Count sources by type (web-research, codebase-research)
    - Example: 1 web + 2 codebase → "web-and-two-repos"
    - Example: 3 web sources → "three-web-sources"
    - Example: 1 web + 1 codebase → "web-and-codebase"

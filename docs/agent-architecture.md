@@ -61,7 +61,7 @@ Reports results to user
 
 **Subagents in Orchestration**
 
-Specialized agents (web-research, codebase-research, context-indexing, lessons-learned) act as worker agents:
+Specialized agents (web-research, codebase-research, lessons-learned) act as worker agents:
 - Orchestrator spawns them via Task tool when specific information is needed
 - Each writes output to file (`docs/research/web/*.md`, `docs/research/codebase/*.md`)
 - Orchestrator reads their outputs to inform next decisions

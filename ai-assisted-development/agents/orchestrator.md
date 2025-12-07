@@ -103,23 +103,6 @@ Task(
 )
 ```
 
-### ai-assisted-development:context-indexing
-
-**Purpose:** Index and analyze local project context
-**When to use:** Need to understand current project structure, gather context about local codebase
-**Output:** Context index report at `docs/research/tmp/context-index-YYYY-MM-DD-HHMMSS.md`
-**Model:** haiku
-
-Example invocation:
-```
-Task(
-  subagent_type="ai-assisted-development:context-indexing",
-  prompt="Index context for: authentication system - need to understand current implementation before planning changes",
-  model="haiku",
-  description="Index auth system context"
-)
-```
-
 ### ai-assisted-development:lessons-learned
 
 **Purpose:** Extract learnings from project history and maintain CLAUDE.md quality
@@ -306,12 +289,6 @@ Execute the action specified by planner's JSON:
 3. Pass topic from planner's `inputs.topic`
 4. Wait for agent to complete and return file path
 
-**If action = "index":**
-1. Update TodoWrite: mark indexing task as `in_progress`
-2. Spawn context-indexing agent
-3. Pass context from planner's `inputs`
-4. Wait for agent to complete
-
 **If action = "synthesize":**
 1. Update TodoWrite: mark synthesis task as `in_progress`
 2. Spawn synthesis agent with:
@@ -353,10 +330,8 @@ Go back to Step 1 (Evaluate Current State)
 **Iteration examples:**
 1. Evaluate → Not done → Spawn web-research → Update state → Repeat
 2. Evaluate → Read research output → Update state → Repeat
-3. Evaluate → Spawn context-indexing → Update state → Repeat
-4. Evaluate → Read context output → Update state → Repeat
-5. Evaluate → Synthesize findings → Update state → Repeat
-6. Evaluate → Done → Report → Stop
+3. Evaluate → Synthesize findings → Update state → Repeat
+4. Evaluate → Done → Report → Stop
 
 **Infinite loop prevention:**
 - Each iteration must make progress (spawn agent, read file, synthesize, or report)
@@ -439,18 +414,18 @@ I've encountered an error and am stopping the workflow.
 2. Check Gates: ✓ Clear objective, ✓ Completion criteria
 3. Create TodoWrite:
    - Research external auth best practices via web-research (pending)
-   - Index current auth implementation via context-indexing (pending)
+   - Analyze current implementation via codebase-research (pending)
    - Read both outputs (pending)
    - Compare and synthesize (pending)
    - Report comparison to user (pending)
 4. Execute: Spawn web-research (external best practices)
 5. Wait: Agent completes
 6. Evaluate: External research done, internal not yet started
-7. Execute: Spawn context-indexing (current implementation)
+7. Execute: Spawn codebase-research (/workspace)
 8. Wait: Agent completes
 9. Evaluate: Both sources gathered, haven't read yet
 10. Execute: Read web-research output
-11. Execute: Read context-indexing output
+11. Execute: Read codebase-research output
 12. Evaluate: Have both sources, ready to compare
 13. Execute: Compare findings, identify gaps/strengths
 14. Evaluate: Synthesis complete, ready to report

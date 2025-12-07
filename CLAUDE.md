@@ -120,4 +120,3 @@ The claude-code-toolbox is meant to be an incremental development approach to pr
 - Batch operations: 3-5 WebSearch/Glob calls in single message, 5-7 Grep searches, 5 Read calls
 - Add CRITICAL markers in agent prompts to prevent sequential operations
 - Emphasize parallel execution explicitly in agent instructions
-**Example**: `ai-assisted-development/agents/context-indexing.md` batches 5 Glob patterns and 5 Read calls per message

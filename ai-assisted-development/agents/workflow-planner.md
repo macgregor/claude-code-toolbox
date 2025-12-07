@@ -94,7 +94,6 @@ Return JSON with this exact schema:
 - **agent**: Full subagent type or null for "report"/"clarify"
   - "ai-assisted-development:web-research"
   - "ai-assisted-development:codebase-research"
-  - "ai-assisted-development:context-indexing"
   - "ai-assisted-development:synthesis"
   - null (for "report" or "clarify")
 - **inputs**: Action-specific parameters
