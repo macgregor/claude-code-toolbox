@@ -70,6 +70,12 @@ TodoWrite([
 
 ### Step 3: Synthesize Research Context
 
+**Only run on first iteration:**
+
+Check your conversation history - have you already run synthesis in this command execution?
+- If YES: Skip this step entirely, go to step 4 (synthesis will be updated in step 8 if research is spawned)
+- If NO: Continue with synthesis below
+
 **Mark todo in_progress:**
 ```
 TodoWrite([
@@ -284,7 +290,30 @@ TodoWrite([
    - If type == "web": Spawn `/web-research <query>`
    - If type == "codebase": Spawn `/codebase-research <url>`
 
-**Note:** New research will be picked up in next iteration's synthesis
+**If any research was spawned:**
+
+Run synthesis to incorporate new research for next iteration:
+
+1. Glob for research reports:
+   ```bash
+   find docs/research -name "*.md" -type f
+   ```
+
+2. Spawn synthesis agent:
+   - subagent_type: `ai-assisted-development:synthesis`
+   - model: `haiku`
+   - description: "Synthesize research for problem"
+   - prompt:
+     ```
+     User's objective: <problem statement>
+
+     Input sources to synthesize:
+     <list of file paths from glob, one per line>
+     ```
+
+3. Capture updated synthesis report path from agent response
+
+**Note:** Updated synthesis will be used in next iteration's refinement
 
 ### Step 9: Ask to Continue
 
@@ -307,6 +336,9 @@ TodoWrite([
 - **TodoWrite pattern**: Create all todos upfront, mark in_progress one at a time, mark completed immediately after
 - **Single-threaded**: Only one todo in_progress at any time
 - **JSON parsing**: Refinement agent returns JSON, parse carefully
-- **Path tracking**: Keep track of doc_path from refinement agent
+- **Path tracking**: Keep track of paths in your context:
+  - `synthesis_report_path`: Path from synthesis agent (updated in step 8 if research spawned)
+  - `doc_path`: Path to refinement document from refinement agent
 - **Iteration loop**: Steps 2-9 repeat until ready or user stops
 - **No commits**: Refinement docs not committed automatically
+- **Synthesis optimization**: Synthesis only runs on first iteration, then again in step 8 if research is spawned
