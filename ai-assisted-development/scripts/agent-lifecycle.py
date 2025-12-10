@@ -49,9 +49,15 @@ def get_toolbox_root(hook_input: Dict[str, Any] = None) -> str:
 
 def generate_request_id(hook_input: Dict[str, Any]) -> str:
     """Generate deterministic request ID: {timestamp}_{hash}"""
+    from datetime import datetime
+
     session_id = hook_input.get("session_id", "")
     timestamp = hook_input.get("timestamp", "")
     prompt = hook_input.get("prompt", "")
+
+    # If no timestamp provided, generate one
+    if not timestamp:
+        timestamp = datetime.now().isoformat()
 
     timestamp_safe = timestamp.replace(":", "-")
     hash_input = f"{session_id}{timestamp}{prompt}"
