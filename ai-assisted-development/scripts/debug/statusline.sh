@@ -12,11 +12,12 @@ INSTALLED_SHA=$(jq -r ".plugins[\"$PLUGIN_ID\"].gitCommitSha // \"unknown\"" "$I
 INSTALL_PATH=$(jq -r ".plugins[\"$PLUGIN_ID\"].installPath // \"\"" "$INSTALLED_JSON" 2>/dev/null)
 
 # Check if we're in dev mode (installed SHA != current git HEAD)
-DEV_WARNING=""
+CURRENT_SHA=""
+DEV_MODE=false
 if [ -n "$INSTALL_PATH" ]; then
   CURRENT_SHA=$(cd "$INSTALL_PATH" && git rev-parse HEAD 2>/dev/null)
   if [ -n "$CURRENT_SHA" ] && [ "$INSTALLED_SHA" != "$CURRENT_SHA" ]; then
-    DEV_WARNING=" ⚠️"
+    DEV_MODE=true
   fi
 fi
 
@@ -34,7 +35,13 @@ fi
 if [ -z "$VERSION" ] || [ "$VERSION" = "unknown" ] || [ -z "$INSTALL_PATH" ]; then
   echo "${PLUGIN_ID}: ⚠️  Plugin not installed."
 else
-  echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7})${DEV_WARNING}"
+  if [ "$DEV_MODE" = true ]; then
+    echo "${PLUGIN_ID}: v${VERSION} ⚠️"
+    echo "📦 Installed: ${INSTALLED_SHA:0:7} | Current: ${CURRENT_SHA:0:7}"
+  else
+    echo "${PLUGIN_ID}: v${VERSION}"
+    echo "📦 Installed: ${INSTALLED_SHA:0:7}"
+  fi
 
   if [ -n "$REQUEST_ID" ]; then
     # Show current request
