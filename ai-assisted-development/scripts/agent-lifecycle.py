@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Universal agent lifecycle hook handler.
-Handles SubagentStart and SubagentStop events for all agents.
+Handles all hook events: PreToolUse, PostToolUse, UserPromptSubmit, Stop,
+SessionStart, PreCompact, Notification, SubagentStart, SubagentStop.
 """
 
 import json
@@ -17,18 +18,49 @@ def main():
     # Dispatch based on event
     event_name = hook_input.get("hook_event_name")
 
-    if event_name == "SubagentStart":
-        handle_start(hook_input)
+    if event_name == "PreToolUse":
+        handle_pre_tool_use(hook_input)
+    elif event_name == "PostToolUse":
+        handle_post_tool_use(hook_input)
+    elif event_name == "UserPromptSubmit":
+        handle_user_prompt_submit(hook_input)
+    elif event_name == "Stop":
+        handle_stop_event(hook_input)
+    elif event_name == "SessionStart":
+        handle_session_start(hook_input)
+    elif event_name == "PreCompact":
+        handle_pre_compact(hook_input)
+    elif event_name == "Notification":
+        handle_notification(hook_input)
+    elif event_name == "SubagentStart":
+        handle_subagent_start(hook_input)
     elif event_name == "SubagentStop":
-        handle_stop(hook_input)
+        handle_subagent_stop(hook_input)
     else:
         print(f"[agent-lifecycle] Unknown event: {event_name}", file=sys.stderr)
         sys.exit(1)
 
 
+def log_hook_event(event_name, hook_input):
+    """Log hook event data to workspace for debugging and analysis."""
+    # Create log directory in project workspace
+    log_dir = Path("/workspace/tmp/hook-logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S-%f")
+    filename = f"{event_name}-{timestamp}.json"
+    log_path = log_dir / filename
+
+    # Write hook input to log file
+    with open(log_path, 'w') as f:
+        json.dump(hook_input, f, indent=2)
+
+    return log_path
+
+
 def extract_agent_name(hook_input):
     """Extract agent name from hook input."""
-    # ADJUST THIS based on Task 3 findings
     # Try these fields in order:
     agent_name = (
         hook_input.get("subagent_type") or
@@ -37,9 +69,8 @@ def extract_agent_name(hook_input):
     )
 
     if not agent_name:
-        print(f"[agent-lifecycle] ERROR: Cannot find agent name in hook input", file=sys.stderr)
-        print(f"Available fields: {list(hook_input.keys())}", file=sys.stderr)
-        sys.exit(2)
+        # For non-subagent hooks, this is expected
+        return None
 
     # If name contains plugin prefix, extract base name
     # e.g., "ai-assisted-development:document-reviewer" -> "document-reviewer"
@@ -80,8 +111,68 @@ def extract_json_from_transcript(transcript_path):
         sys.exit(2)
 
 
-def handle_start(hook_input):
+def handle_pre_tool_use(hook_input):
+    """Handle PreToolUse event."""
+    log_path = log_hook_event("PreToolUse", hook_input)
+    tool_name = hook_input.get("tool_name", "unknown")
+    print(f"[PreToolUse] Tool: {tool_name}")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_post_tool_use(hook_input):
+    """Handle PostToolUse event."""
+    log_path = log_hook_event("PostToolUse", hook_input)
+    tool_name = hook_input.get("tool_name", "unknown")
+    print(f"[PostToolUse] Tool: {tool_name}")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_user_prompt_submit(hook_input):
+    """Handle UserPromptSubmit event."""
+    log_path = log_hook_event("UserPromptSubmit", hook_input)
+    print(f"[UserPromptSubmit] User prompt received")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_stop_event(hook_input):
+    """Handle Stop event."""
+    log_path = log_hook_event("Stop", hook_input)
+    print(f"[Stop] Session stopping")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_session_start(hook_input):
+    """Handle SessionStart event."""
+    log_path = log_hook_event("SessionStart", hook_input)
+    print(f"[SessionStart] New session starting")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_pre_compact(hook_input):
+    """Handle PreCompact event."""
+    log_path = log_hook_event("PreCompact", hook_input)
+    print(f"[PreCompact] Context compaction starting")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_notification(hook_input):
+    """Handle Notification event."""
+    log_path = log_hook_event("Notification", hook_input)
+    notification_type = hook_input.get("notification_type", "unknown")
+    print(f"[Notification] Type: {notification_type}")
+    print(f"Logged to: {log_path}")
+    sys.exit(0)
+
+
+def handle_subagent_start(hook_input):
     """Handle SubagentStart event."""
+    log_path = log_hook_event("SubagentStart", hook_input)
     agent_name = extract_agent_name(hook_input)
 
     # Create workspace
@@ -90,11 +181,13 @@ def handle_start(hook_input):
 
     print(f"[SubagentStart] {agent_name} initialized")
     print(f"Workspace: {workspace}")
+    print(f"Logged to: {log_path}")
     sys.exit(0)
 
 
-def handle_stop(hook_input):
+def handle_subagent_stop(hook_input):
     """Handle SubagentStop event."""
+    log_path = log_hook_event("SubagentStop", hook_input)
     agent_name = extract_agent_name(hook_input)
 
     # Get transcript path
@@ -121,6 +214,7 @@ def handle_stop(hook_input):
 
     print(f"[SubagentStop] {agent_name} completed")
     print(f"Output: {output_path}")
+    print(f"Logged to: {log_path}")
     sys.exit(0)
 
 
