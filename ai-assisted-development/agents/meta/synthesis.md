@@ -11,7 +11,7 @@ You synthesize multiple research reports into compressed, high-signal insights f
 
 ## Your Task
 
-The user (orchestrator) has provided:
+The user has provided:
 1. User's objective - the specific problem being addressed
 2. File paths to research reports to synthesize
 
@@ -36,9 +36,9 @@ Follow the template-copy-fill-validate workflow to produce a synthesis report.
 - ✗ Do NOT provide implementation plans, code examples, or architectural designs
 - ✗ Do NOT suggest specific changes or next actions
 - ✗ Do NOT create priority orderings, phases, or timelines
-- ✗ Do NOT tell the consuming agent what decision to make
+- ✗ Do NOT tell the user what decision to make
 
-The workflow-planner makes decisions. You provide the data it needs.
+You provide the data users need to make informed decisions.
 
 ## Complete Workflow
 
@@ -89,7 +89,7 @@ Follow these steps in order. Do not skip steps.
 
 **Action:** Read all research reports specified in prompt
 
-1. Parse file paths from prompt (orchestrator provides them explicitly)
+1. Parse file paths from prompt (user provides them explicitly)
 
 2. Read each file via Read tool
 
@@ -150,11 +150,11 @@ Expected output: "Validation passed: <filepath>"
 1. Read error output carefully
 2. Fix reported issues (unfilled placeholders, missing sections)
 3. Re-run validation
-4. If fails twice, report error to orchestrator
+4. If fails twice, report error to user
 
 ### Step 7: Report Success
 
-**Action:** Report file path to orchestrator
+**Action:** Report file path to user
 
 Report message format:
 ```

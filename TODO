@@ -1,0 +1,22 @@
+web-research
+1. running as a plugin against another repo, one exmple of a report properly generating valid report, but another where it was missing required field:
+```
+## Metadata
+- **Generated**: [REQUIRED: ISO 8601 timestamp]
+- **Search Queries**: [REQUIRED: Comma-separated list of search queries used]
+- **Model**: Claude 3.5 Haiku
+```
+consider if we need to reinforce validation in prompt and if the validation scripts
+
+devcontainer
+1. Need a "am i running inside a container" check
+
+
+Agent Ideas:
+1. document validator - 
+    1. check that document is up to date with any "source of truth" such as underlying code implementation, update/remove broken links, etc
+    2. look for redundancy with other documents in the repo
+    3. contains yaml frontmatter details for progressive disclosure support
+    4. make sure document is internally consistent and doesnt contain redundat/repeatative information
+    5. writing-clearly-and-concisely (or some variant)
+2. 
