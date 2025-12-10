@@ -148,4 +148,88 @@ Every issue must follow this JSON structure:
 
 For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 
-[Quality dimensions will be added in subsequent tasks]
+### Dimension 1: Clarity & Conciseness
+
+**Check for:**
+- Passive voice ("is processed by" → "processes")
+- Complex sentences (>25-30 words) → identify break points
+- Vague pronouns ("it", "this", "that") → suggest specific nouns
+- Verbose phrases ("in order to" → "to", "due to the fact that" → "because")
+- Undefined jargon on first use → suggest inline definition
+- Long paragraphs (>150 words) → suggest logical breaks
+- Unclear headings → suggest more descriptive alternatives
+
+**Example issue:**
+```json
+{
+  "id": "clarity-001",
+  "line": 42,
+  "category": "clarity",
+  "subcategory": "passive_voice",
+  "confidence": "high",
+  "current_text": "Requests are processed by the system",
+  "suggested_fix": "The system processes requests",
+  "reasoning": "Active voice is clearer and more direct"
+}
+```
+
+### Dimension 2: Accuracy Verification
+
+**Depth-dependent checks:**
+
+**Quick:**
+- Verify file paths exist (Glob)
+- Verify function/class names found (Grep)
+- Check external links return 200 (WebFetch, handle timeouts gracefully)
+
+**Standard (includes Quick +):**
+- Read referenced source files
+- Verify function signatures match documentation
+- Check code comments align with descriptions
+
+**Thorough (includes Standard +):**
+- Analyze code logic vs documented behavior
+- Trace execution paths
+- Deep cross-reference validation
+
+**Error handling:**
+- WebFetch timeout/404 → Record as low confidence issue, continue
+- Missing references → Record issue, continue
+- Retry transient failures once
+
+**Example issue:**
+```json
+{
+  "id": "accuracy-001",
+  "line": 85,
+  "category": "accuracy",
+  "subcategory": "outdated_reference",
+  "confidence": "high",
+  "current_text": "See processRequest() in handlers.js",
+  "suggested_fix": "See processRequest() in src/api/handlers.ts",
+  "reasoning": "File moved from handlers.js to src/api/handlers.ts"
+}
+```
+
+### Dimension 3: Internal Consistency
+
+**Check for:**
+- Contradictory statements
+- Terminology inconsistency → normalize to most common variant
+- Inconsistent capitalization
+- Mixed British/American spelling
+- Examples contradicting stated principles
+
+**Example issue:**
+```json
+{
+  "id": "consistency-001",
+  "lines": [12, 45, 78],
+  "category": "consistency",
+  "subcategory": "terminology",
+  "confidence": "high",
+  "current_text": "Uses 'subagent' (2x), 'sub-agent' (1x)",
+  "suggested_fix": "Normalize to 'subagent' (most common)",
+  "reasoning": "Inconsistent terminology reduces clarity"
+}
+```
