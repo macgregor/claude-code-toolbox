@@ -36,91 +36,15 @@ def main():
         handle_subagent_start(hook_input)
     elif event_name == "SubagentStop":
         handle_subagent_stop(hook_input)
+    elif event_name == "SessionEnd":
+        handle_session_end(hook_input)
+    elif event_name == "PostToolUseFailure":
+        handle_post_tool_use_failure(hook_input)
+    elif event_name == "PermissionRequest":
+        handle_permission_request(hook_input)
     else:
         print(f"[agent-lifecycle] Unknown event: {event_name}", file=sys.stderr)
         sys.exit(1)
-
-
-def log_hook_event(event_name, hook_input):
-    """Log hook event data to both global and session-scoped JSONL files."""
-    # Create log directories in project workspace
-    log_dir = Path("/workspace/tmp")
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    session_log_dir = Path("/workspace/tmp/hook-logs")
-    session_log_dir.mkdir(parents=True, exist_ok=True)
-
-    # Add timestamp to hook input
-    log_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "event": event_name,
-        **hook_input
-    }
-
-    # Write to global log (union of all sessions)
-    global_log_file = log_dir / "hook-events.jsonl"
-    with open(global_log_file, 'a') as f:
-        f.write(json.dumps(log_entry) + '\n')
-
-    # Write to session-scoped log (prevents session clobbering)
-    session_id = hook_input.get("session_id", "unknown")
-    session_log_file = session_log_dir / f"{session_id}.jsonl"
-    with open(session_log_file, 'a') as f:
-        f.write(json.dumps(log_entry) + '\n')
-
-    return session_log_file
-
-
-def extract_agent_name(hook_input):
-    """Extract agent name from hook input."""
-    # Try these fields in order:
-    agent_name = (
-        hook_input.get("subagent_type") or
-        hook_input.get("agent_id") or
-        hook_input.get("agent_name")
-    )
-
-    if not agent_name:
-        # For non-subagent hooks, this is expected
-        return None
-
-    # If name contains plugin prefix, extract base name
-    # e.g., "ai-assisted-development:document-reviewer" -> "document-reviewer"
-    if ":" in agent_name:
-        agent_name = agent_name.split(":")[-1]
-
-    return agent_name
-
-
-def extract_json_from_transcript(transcript_path):
-    """Extract final assistant message from agent transcript and parse as JSON."""
-    try:
-        with open(transcript_path) as f:
-            transcript = json.load(f)
-    except Exception as e:
-        print(f"[SubagentStop] ERROR: Cannot read transcript: {e}", file=sys.stderr)
-        sys.exit(2)
-
-    # Get last assistant message
-    agent_output = None
-    for message in reversed(transcript):
-        if message.get("role") == "assistant":
-            agent_output = message.get("content", "")
-            break
-
-    if not agent_output:
-        print(f"[SubagentStop] ERROR: No assistant message in transcript", file=sys.stderr)
-        sys.exit(2)
-
-    # Parse as JSON
-    try:
-        data = json.loads(agent_output)
-        return data
-    except json.JSONDecodeError as e:
-        print(f"[SubagentStop] ERROR: Invalid JSON in agent output", file=sys.stderr)
-        print(f"JSON error: {e}", file=sys.stderr)
-        print(f"Agent output preview: {agent_output[:200]}...", file=sys.stderr)
-        sys.exit(2)
 
 
 def handle_pre_tool_use(hook_input):
