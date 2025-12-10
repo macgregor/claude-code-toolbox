@@ -5,10 +5,85 @@ Handles all hook events: PreToolUse, PostToolUse, UserPromptSubmit, Stop,
 SessionStart, PreCompact, Notification, SubagentStart, SubagentStop.
 """
 
+import hashlib
 import json
+import os
+import re
+import shutil
 import sys
-from datetime import datetime
 from pathlib import Path
+from typing import Dict, Any, List
+
+
+def generate_request_id(hook_input: Dict[str, Any]) -> str:
+    """Generate deterministic request ID: {timestamp}_{hash}"""
+    session_id = hook_input.get("session_id", "")
+    timestamp = hook_input.get("timestamp", "")
+    prompt = hook_input.get("prompt", "")
+
+    timestamp_safe = timestamp.replace(":", "-")
+    hash_input = f"{session_id}{timestamp}{prompt}"
+    hash_digest = hashlib.sha256(hash_input.encode()).hexdigest()
+    hash_short = hash_digest[:8]
+
+    return f"{timestamp_safe}_{hash_short}"
+
+
+def create_request_directory(toolbox_root: str, request_id: str) -> Path:
+    """Create .toolbox/events/{request_id}/ with subdirs"""
+    request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+    request_dir.mkdir(parents=True, exist_ok=True)
+    (request_dir / "work").mkdir(exist_ok=True)
+    (request_dir / "session-logs").mkdir(exist_ok=True)
+    (request_dir / "hook-events.jsonl").touch()
+    (request_dir / "errors.log").touch()
+    return request_dir
+
+
+def get_current_request_id(toolbox_root: str) -> str:
+    """Read current request ID from .toolbox/events/.current-request-id"""
+    try:
+        current_id_file = Path(toolbox_root) / ".toolbox" / "events" / ".current-request-id"
+        if current_id_file.exists():
+            return current_id_file.read_text().strip()
+    except Exception:
+        pass
+    return ""
+
+
+def append_to_request_events(hook_input: dict, toolbox_root: str = None):
+    """Append hook event to request's hook-events.jsonl if request is active."""
+    try:
+        if not toolbox_root:
+            toolbox_root = os.environ.get("TOOLBOX_ROOT")
+        if not toolbox_root:
+            return
+
+        request_id = get_current_request_id(toolbox_root)
+        if not request_id:
+            return
+
+        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+        hook_events_file = request_dir / "hook-events.jsonl"
+
+        with open(hook_events_file, 'a') as f:
+            f.write(json.dumps(hook_input) + '\n')
+    except Exception:
+        pass
+
+
+def parse_context_tags(text: str) -> List[str]:
+    """Extract content from <context> tags"""
+    pattern = r'<context>(.*?)</context>'
+    matches = re.findall(pattern, text, re.DOTALL)
+    return [match.strip() for match in matches]
+
+
+def parse_work_tags(text: str) -> List[Dict[str, str]]:
+    """Extract {relpath, content} from <work> tags"""
+    pattern = r'<work\s+relpath="([^"]+)"(?:\s+abspath="[^"]+")?\s*>(.*?)</work>'
+    matches = re.findall(pattern, text, re.DOTALL)
+    return [{"relpath": relpath, "content": content.strip()} for relpath, content in matches]
 
 
 def main():
