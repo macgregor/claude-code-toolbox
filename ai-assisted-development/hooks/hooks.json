@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStart": [
       {
-        "matcher": "*",
+        "matcher": "document-reviewer",
         "hooks": [
           {
             "type": "command",
@@ -13,7 +13,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "*",
+        "matcher": "document-reviewer",
         "hooks": [
           {
             "type": "command",
