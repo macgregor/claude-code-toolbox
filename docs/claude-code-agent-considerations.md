@@ -46,12 +46,27 @@
 - **Reference**: [Skills Documentation](https://code.claude.com/docs/en/skills)
 
 **Hooks**
-- Automated commands at lifecycle events: PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStop, SessionStart, PreCompact, Notification
-- Configuration in `hooks.json` with matchers for specific tools
+- Automated commands at lifecycle events: PreToolUse, PostToolUse, UserPromptSubmit, Stop, SubagentStart, SubagentStop, SessionStart, PreCompact, Notification
+- Configuration in `hooks.json` with matchers for specific tools/agents
 - Exit Code 2 blocks operation and shows error (enables quality gates)
 - Prompt-based hooks for context-aware decisions
 - Enable deterministic workflow automation without interruption
-- **Reference**: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide)
+
+**SubagentStart/SubagentStop Behavior** (verified experimentally):
+- SubagentStart fires for BOTH slash command and Task tool invocations
+- Requires matcher configuration - use `"*"` to capture all agents
+- Restrictive matchers (e.g., `"matcher": "document-reviewer"`) only fire for matching agents
+- SubagentStart added in Claude Code v2.0.43
+- Event sequence: PreToolUse (Task) → SubagentStart → agent execution → SubagentStop → PostToolUse (Task)
+- Session initialization may spawn internal agents (visible in SubagentStart/Stop hooks)
+
+**Hook Matcher Best Practices**:
+- Use `"*"` for universal lifecycle tracking (all tools/agents)
+- Use specific tool names for targeted behavior (e.g., `"matcher": "Task"` for Task tool only)
+- Use agent names for agent-specific hooks (e.g., `"matcher": "document-reviewer"`)
+- SubagentStart/SubagentStop matchers apply to agent type names, not tool names
+
+**Reference**: [Hooks Guide](https://code.claude.com/docs/en/hooks-guide)
 
 **Plugins**
 - Bundle commands, agents, MCP servers, hooks into distributable packages
@@ -387,10 +402,12 @@ DO NOT execute tools sequentially when they can run in parallel.
 - **Example**: [ruvnet/claude-flow](https://github.com/ruvnet/claude-flow)
 
 **Hook-Based Coordination**:
-- SubagentStop hooks enable handoffs
+- SubagentStart hooks enable pre-execution validation and logging
+- SubagentStop hooks enable handoffs and post-execution processing
 - Print next steps to STDOUT for parent visibility
 - Exit Code 2 blocks completion for quality gates
 - Prompt-based hooks for context-aware decisions
+- Both hook types fire for slash command AND Task tool invocations (when matcher configured correctly)
 
 ### Handoff Protocols
 
@@ -466,10 +483,12 @@ DO NOT execute tools sequentially when they can run in parallel.
 ### Continuous Monitoring
 
 **Observability Systems**:
-- Hook-based event tracking (PreToolUse, PostToolUse)
-- SQLite event logging
+- Hook-based event tracking (PreToolUse, PostToolUse, SubagentStart, SubagentStop)
+- SQLite event logging for queryable history
 - WebSocket real-time visualization
 - Session-based filtering and color coding
+- Agent lifecycle tracking via SubagentStart/SubagentStop hooks
+- Hook input includes session_id for per-session event correlation
 - **Example**: [disler/claude-code-hooks-multi-agent-observability](https://github.com/disler/claude-code-hooks-multi-agent-observability)
 
 **Performance Metrics**:
@@ -578,6 +597,12 @@ DO NOT execute tools sequentially when they can run in parallel.
 - DON'T: Implicit assumptions about data formats between agents
 - DO: Explicit input/output specifications, validation
 - **Impact**: Integration failures, data loss
+
+**❌ Restrictive Hook Matchers**:
+- DON'T: Use agent-specific matchers (e.g., `"matcher": "document-reviewer"`) for lifecycle tracking
+- DO: Use `"*"` matcher for universal SubagentStart/SubagentStop tracking
+- **Impact**: Missing events, incomplete observability, debugging difficulties
+- **Common mistake**: SubagentStop fires but SubagentStart doesn't (due to restrictive matcher)
 
 ---
 

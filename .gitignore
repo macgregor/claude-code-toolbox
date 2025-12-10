@@ -10,3 +10,8 @@ temp/
 
 # Orchestrator ephemeral state
 .orchestrator/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
