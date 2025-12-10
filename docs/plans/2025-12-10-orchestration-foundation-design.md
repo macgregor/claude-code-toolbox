@@ -229,7 +229,8 @@ Example: `2025-12-10T12-02-22.062247_a7f3b9c2`
 - Copy agent transcript to `{request_id}/session-logs/agent-{agent_id}.jsonl`
 - Parse agent transcript (JSONL format, same structure as session log):
   - Read last assistant message from transcript
-  - Extract message content (contains `<context>` and `<work>` tags)
+  - Extract text from message content blocks (content is array, concatenate text from `type: "text"` blocks)
+  - Extracted text contains `<context>` and `<work>` tags
 - Parse `<context>` tags from final output:
   - Extract content, wrap with `<agent-{agent_id} type="{agent_type}">`
   - Append to `{request_id}/context.md`
@@ -423,6 +424,11 @@ Report: work/python-research-2025-12-10.json
 - Assistant messages: `type: "assistant"`, `message.role: "assistant"`
 - System messages: `type: "system"`
 - File snapshots: `type: "file-history-snapshot"`
+- **Content field**: `message.content` is an array of content blocks:
+  - Text blocks: `{"type": "text", "text": "..."}`
+  - Tool use blocks: `{"type": "tool_use", "id": "...", "name": "...", "input": {...}}`
+  - Tool result blocks: `{"type": "tool_result", "tool_use_id": "...", "content": "..."}`
+  - To extract text: iterate blocks and concatenate all `text` fields from blocks with `type: "text"`
 
 ---
 
