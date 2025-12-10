@@ -14,7 +14,7 @@
     "./agents/meta/synthesis.md",
     "./agents/planning/web-research.md",
     "./agents/planning/codebase-research.md",
-    "./agents/document-reviewer.md"
+    "./agents/quality/document-reviewer.md"
   ],
   "skills": "./skills",
   "commands": "./commands",

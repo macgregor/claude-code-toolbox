@@ -522,7 +522,7 @@ Report: {json_file_path}
 ## Implementation Artifacts
 
 **Files to create:**
-- `ai-assisted-development/agents/document-reviewer.md` - Agent implementation
+- `ai-assisted-development/agents/quality/document-reviewer.md` - Agent implementation
 
 **No slash command needed**: Agent invoked directly via Task tool for Phase 1
 
