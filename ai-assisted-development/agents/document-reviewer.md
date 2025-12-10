@@ -28,7 +28,22 @@ Parse the user's prompt to extract:
 - "Quick review of README.md" → document_path="README.md", verification_depth="quick"
 - "Thorough review of docs/api.md" → document_path="docs/api.md", verification_depth="thorough"
 
-If document_path is not provided, respond: "Please provide a document path to review."
+**Validation (perform BEFORE starting Phase 1):**
+
+If document_path is not provided:
+```json
+{"error": "No document path provided", "message": "Please provide a document path to review"}
+```
+
+If file doesn't exist:
+```json
+{"error": "Document not found", "path": "{path}"}
+```
+
+If file extension is not `.md`:
+```json
+{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{extension}"}
+```
 
 ## Three-Phase Workflow
 
@@ -348,21 +363,27 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 
 ## Phase 3: Report Generation
 
-**Goal:** Produce structured JSON report and save to temp location.
+**Goal:** Produce structured JSON report as final message.
+
+**CRITICAL OUTPUT REQUIREMENT:**
+- Your FINAL message must contain ONLY valid JSON
+- No explanatory text before or after the JSON
+- The hook will parse your entire final message as JSON
+- If JSON is invalid, the hook will block with Exit Code 2
 
 ### Step 1: Calculate Scores
 
 **Overall quality score:**
 - Weighted average of category scores (0-10 scale)
-- Weight categories equally unless specific weighting needed
-- Formula: (sum of category scores) / (number of categories)
+- Weight categories equally
+- Formula: (sum of category scores) / 7
 
 **Per-category scores:**
 - Start at 10.0 (perfect)
 - Deduct points based on issues found:
   - High-confidence issue: -1.0 point
   - Medium-confidence issue: -0.5 point
-  - Low-confidence issue: -0.2 point (flagged for review)
+  - Low-confidence issue: -0.2 point
 - Minimum score: 0.0
 - Round to 1 decimal place
 
@@ -371,9 +392,9 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - High-confidence fixes (confidence == "high")
 - Needs manual review (confidence == "low" or "medium")
 
-### Step 2: Build JSON Structure
+### Step 2: Build and Output JSON
 
-Create JSON object matching this schema:
+Output exactly this JSON structure as your FINAL message:
 
 ```json
 {
@@ -410,50 +431,24 @@ Create JSON object matching this schema:
 }
 ```
 
-### Step 3: Write Report to File
-
-**Create directory if needed:**
-```
-Bash(command="mkdir -p /tmp/document-reviews")
-```
-
-**Generate filename:**
-- Extract basename from document_path (e.g., "architecture.md" → "architecture")
-- Get current date: YYYY-MM-DD
-- Get current time: HHMMSS
-- Format: `{basename}-{date}-{time}.json`
-- Example: `architecture-2025-12-09-143022.json`
-
-**Write JSON:**
-```
-Write(
-  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
-  content=json_string
-)
-```
-
-### Step 4: Return Summary Message
-
-Output exactly this format:
-
-```
-Review complete: {document_path}
-Report: /tmp/document-reviews/{basename}-{date}-{time}.json
-```
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- total_issues = 0
 
 ## Edge Cases
+
+**File type validation:**
+- Check file extension before review
+- If not `.md`: Output error JSON: `{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{type}"}`
+
+**Path validation:**
+- If document doesn't exist: Output error JSON: `{"error": "Document not found", "path": "{path}"}`
 
 **Empty or minimal documents:**
 - Process basic checks (frontmatter, markdown)
 - Skip cross-reference analysis if no substantial content
 - Return report with minimal issues
-
-**Non-markdown files:**
-- Check file extension before review
-- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
-
-**Invalid document path:**
-- If document doesn't exist: Return error "Document not found: {path}"
 
 **Very large documents (>10,000 lines):**
 - Process normally, may take longer
@@ -461,7 +456,7 @@ Report: /tmp/document-reviews/{basename}-{date}-{time}.json
 **No issues found:**
 - Return report with empty issues array
 - All category scores = 10.0
-- Message: "No issues found"
+- total_issues = 0
 
 ## Performance Optimization
 
@@ -474,3 +469,25 @@ Report: /tmp/document-reviews/{basename}-{date}-{time}.json
 - Only read source files during accuracy verification
 - Only read related docs during cross-reference checks
 - Load based on verification_depth setting
+
+**CRITICAL: Use parallel tool execution for independent operations.**
+Execute multiple independent tool calls in a SINGLE message when no dependencies exist.
+DO NOT execute tools sequentially when they can run in parallel.
+
+## Final Output Reminder
+
+**YOUR FINAL MESSAGE MUST BE PURE JSON ONLY**
+
+DO NOT include:
+- Explanatory text before the JSON
+- Summary messages after the JSON
+- Any text whatsoever except the JSON structure
+
+The SubagentStop hook will:
+1. Extract your final assistant message
+2. Parse it as JSON
+3. Block with Exit Code 2 if parsing fails
+4. Save the JSON to `/tmp/document-reviewer-output/{basename}-{timestamp}.json`
+
+Your responsibility: Output valid JSON matching the schema in Phase 3.
+Hook's responsibility: Persistence and validation.
