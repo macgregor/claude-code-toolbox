@@ -42,21 +42,25 @@ def main():
 
 
 def log_hook_event(event_name, hook_input):
-    """Log hook event data to workspace for debugging and analysis."""
+    """Log hook event data to single JSONL file for debugging and analysis."""
     # Create log directory in project workspace
-    log_dir = Path("/workspace/tmp/hook-logs")
+    log_dir = Path("/workspace/tmp")
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S-%f")
-    filename = f"{event_name}-{timestamp}.json"
-    log_path = log_dir / filename
+    log_file = log_dir / "hook-events.jsonl"
 
-    # Write hook input to log file
-    with open(log_path, 'w') as f:
-        json.dump(hook_input, f, indent=2)
+    # Add timestamp to hook input
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "event": event_name,
+        **hook_input
+    }
 
-    return log_path
+    # Append to JSONL file (one JSON object per line)
+    with open(log_file, 'a') as f:
+        f.write(json.dumps(log_entry) + '\n')
+
+    return log_file
 
 
 def extract_agent_name(hook_input):
