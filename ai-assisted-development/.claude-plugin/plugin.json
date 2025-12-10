@@ -17,7 +17,8 @@
     "./agents/planning/web-research.md",
     "./agents/planning/codebase-research.md",
     "./agents/lessons-learned.md",
-    "./agents/planning/problem-refinement.md"
+    "./agents/planning/problem-refinement.md",
+    "./agents/document-reviewer.md"
   ],
   "skills": "./skills",
   "commands": "./commands",
