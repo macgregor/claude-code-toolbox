@@ -42,12 +42,13 @@ def main():
 
 
 def log_hook_event(event_name, hook_input):
-    """Log hook event data to single JSONL file for debugging and analysis."""
-    # Create log directory in project workspace
+    """Log hook event data to both global and session-scoped JSONL files."""
+    # Create log directories in project workspace
     log_dir = Path("/workspace/tmp")
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = log_dir / "hook-events.jsonl"
+    session_log_dir = Path("/workspace/tmp/hook-logs")
+    session_log_dir.mkdir(parents=True, exist_ok=True)
 
     # Add timestamp to hook input
     log_entry = {
@@ -56,11 +57,18 @@ def log_hook_event(event_name, hook_input):
         **hook_input
     }
 
-    # Append to JSONL file (one JSON object per line)
-    with open(log_file, 'a') as f:
+    # Write to global log (union of all sessions)
+    global_log_file = log_dir / "hook-events.jsonl"
+    with open(global_log_file, 'a') as f:
         f.write(json.dumps(log_entry) + '\n')
 
-    return log_file
+    # Write to session-scoped log (prevents session clobbering)
+    session_id = hook_input.get("session_id", "unknown")
+    session_log_file = session_log_dir / f"{session_id}.jsonl"
+    with open(session_log_file, 'a') as f:
+        f.write(json.dumps(log_entry) + '\n')
+
+    return session_log_file
 
 
 def extract_agent_name(hook_input):
