@@ -175,16 +175,15 @@ def handle_notification(hook_input):
 
 
 def handle_subagent_start(hook_input):
-    """Handle SubagentStart event."""
+    """Handle SubagentStart event (new hook as of ~3 weeks ago)."""
     log_path = log_hook_event("SubagentStart", hook_input)
     agent_name = extract_agent_name(hook_input)
 
-    # Create workspace
-    workspace = Path(f"/tmp/{agent_name}-workspace")
-    workspace.mkdir(parents=True, exist_ok=True)
+    if agent_name:
+        print(f"[SubagentStart] {agent_name} starting")
+    else:
+        print(f"[SubagentStart] Subagent starting")
 
-    print(f"[SubagentStart] {agent_name} initialized")
-    print(f"Workspace: {workspace}")
     print(f"Logged to: {log_path}")
     sys.exit(0)
 
