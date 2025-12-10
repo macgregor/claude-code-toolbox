@@ -6,6 +6,7 @@ Handles SubagentStart and SubagentStop events for all agents.
 
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 
@@ -33,9 +34,39 @@ def main():
         sys.exit(1)
 
 
+def extract_agent_name(hook_input):
+    """Extract agent name from hook input."""
+    # ADJUST THIS based on Task 3 findings
+    # Try these fields in order:
+    agent_name = (
+        hook_input.get("subagent_type") or
+        hook_input.get("agent_id") or
+        hook_input.get("agent_name")
+    )
+
+    if not agent_name:
+        print(f"[agent-lifecycle] ERROR: Cannot find agent name in hook input", file=sys.stderr)
+        print(f"Available fields: {list(hook_input.keys())}", file=sys.stderr)
+        sys.exit(2)
+
+    # If name contains plugin prefix, extract base name
+    # e.g., "ai-assisted-development:document-reviewer" -> "document-reviewer"
+    if ":" in agent_name:
+        agent_name = agent_name.split(":")[-1]
+
+    return agent_name
+
+
 def handle_start(hook_input):
     """Handle SubagentStart event."""
-    print(f"[SubagentStart] Initialized")
+    agent_name = extract_agent_name(hook_input)
+
+    # Create workspace
+    workspace = Path(f"/tmp/{agent_name}-workspace")
+    workspace.mkdir(parents=True, exist_ok=True)
+
+    print(f"[SubagentStart] {agent_name} initialized")
+    print(f"Workspace: {workspace}")
     sys.exit(0)
 
 
