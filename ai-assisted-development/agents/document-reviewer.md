@@ -48,7 +48,267 @@ Produce structured JSON report and save to `/tmp/document-reviews/`.
 ### Step 1: Read Target Document
 
 ```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
 Read(file_path=document_path)
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
 
 - Load full document content
@@ -68,8 +328,268 @@ Read(file_path=document_path)
 **Execute in PARALLEL** (single message, multiple tool calls):
 
 ```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
 Grep(pattern=document_basename, output_mode="files_with_matches")  # Find docs linking TO us
 Grep(pattern="\\[.*\\]\\(.*\\.md\\)", path=document_path, output_mode="content")  # Find links FROM us
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
 
 From results:
@@ -86,8 +606,268 @@ From document content, extract:
 
 Verify references exist:
 ```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
 Glob(pattern="**/mentioned-file.py")
 Grep(pattern="def function_name|class ClassName", output_mode="files_with_matches")
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
 
 Note which references:
@@ -133,6 +913,136 @@ Use three-tier confidence: "high" | "medium" | "low"
 
 Every issue must follow this JSON structure:
 
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "category-###",
@@ -144,6 +1054,136 @@ Every issue must follow this JSON structure:
   "suggested_fix": "Specific recommendation or null",
   "reasoning": "Why this is an issue and rationale for fix"
 }
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
 
 For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
@@ -160,6 +1200,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Unclear headings → suggest more descriptive alternatives
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "clarity-001",
@@ -171,6 +1341,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
   "suggested_fix": "The system processes requests",
   "reasoning": "Active voice is clearer and more direct"
 }
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
 
 ### Dimension 2: Accuracy Verification
@@ -198,6 +1498,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Retry transient failures once
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "accuracy-001",
@@ -211,6 +1641,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
+
 ### Dimension 3: Internal Consistency
 
 **Check for:**
@@ -221,6 +1781,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Examples contradicting stated principles
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "consistency-001",
@@ -234,6 +1924,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
+
 ### Dimension 4: Redundancy Elimination
 
 **Check for:**
@@ -242,6 +2062,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Duplicate examples
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "redundancy-001",
@@ -255,6 +2205,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
+
 ### Dimension 5: Cross-Reference Validation (DRY)
 
 **Check for:**
@@ -266,6 +2346,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
   - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
 
 **Example issues:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "cross-ref-001",
@@ -289,6 +2499,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
+
 ### Dimension 6: Appropriate Detail Level
 
 **Check for:**
@@ -309,6 +2649,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Complex flows/architecture → Keep
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "detail-001",
@@ -322,6 +2792,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
+```
+
 ### Dimension 7: Markdown Rendering Issues
 
 **Check for:**
@@ -333,6 +2933,136 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Unescaped special characters
 
 **Example issue:**
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```json
 {
   "id": "markdown-001",
@@ -344,4 +3074,134 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
   "suggested_fix": "Add blank line between list items",
   "reasoning": "Required for proper markdown rendering"
 }
+```
+
+## Phase 3: Report Generation
+
+**Goal:** Produce structured JSON report and save to temp location.
+
+### Step 1: Calculate Scores
+
+**Overall quality score:**
+- Weighted average of category scores (0-10 scale)
+- Weight categories equally unless specific weighting needed
+- Formula: (sum of category scores) / (number of categories)
+
+**Per-category scores:**
+- Start at 10.0 (perfect)
+- Deduct points based on issues found:
+  - High-confidence issue: -1.0 point
+  - Medium-confidence issue: -0.5 point
+  - Low-confidence issue: -0.2 point (flagged for review)
+- Minimum score: 0.0
+- Round to 1 decimal place
+
+**Count issues:**
+- Total issues found
+- High-confidence fixes (confidence == "high")
+- Needs manual review (confidence == "low" or "medium")
+
+### Step 2: Build JSON Structure
+
+Create JSON object matching this schema:
+
+```json
+{
+  "document": "path/to/document.md",
+  "reviewed_at": "2025-12-09T14:30:22Z",
+  "verification_depth": "standard|quick|thorough",
+  "summary": {
+    "total_issues": 12,
+    "high_confidence_fixes": 8,
+    "needs_manual_review": 4,
+    "overall_quality_score": 7.5
+  },
+  "issues": [
+    {
+      "id": "category-###",
+      "line": 42,
+      "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+      "subcategory": "specific_type",
+      "confidence": "high|medium|low",
+      "current_text": "Text excerpt",
+      "suggested_fix": "Recommendation or null",
+      "reasoning": "Explanation"
+    }
+  ],
+  "scores_by_category": {
+    "clarity": 7.5,
+    "accuracy": 9.0,
+    "consistency": 8.0,
+    "redundancy": 6.5,
+    "cross_references": 7.0,
+    "detail_level": 8.5,
+    "markdown": 9.5
+  }
+}
+```
+
+### Step 3: Write Report to File
+
+**Create directory if needed:**
+```
+Bash(command="mkdir -p /tmp/document-reviews")
+```
+
+**Generate filename:**
+- Extract basename from document_path (e.g., "architecture.md" → "architecture")
+- Get current date: YYYY-MM-DD
+- Get current time: HHMMSS
+- Format: `{basename}-{date}-{time}.json`
+- Example: `architecture-2025-12-09-143022.json`
+
+**Write JSON:**
+```
+Write(
+  file_path="/tmp/document-reviews/{basename}-{date}-{time}.json",
+  content=json_string
+)
+```
+
+### Step 4: Return Summary Message
+
+Output exactly this format:
+
+```
+Review complete: {document_path}
+Report: /tmp/document-reviews/{basename}-{date}-{time}.json
+```
+
+## Edge Cases
+
+**Empty or minimal documents:**
+- Process basic checks (frontmatter, markdown)
+- Skip cross-reference analysis if no substantial content
+- Return report with minimal issues
+
+**Non-markdown files:**
+- Check file extension before review
+- If not `.md`: Return error "Document reviewer only supports markdown files. {filename} is {detected_type}"
+
+**Invalid document path:**
+- If document doesn't exist: Return error "Document not found: {path}"
+
+**Very large documents (>10,000 lines):**
+- Process normally, may take longer
+
+**No issues found:**
+- Return report with empty issues array
+- All category scores = 10.0
+- Message: "No issues found"
+
+## Performance Optimization
+
+**Parallel tool execution:**
+- Batch Grep calls (5-7 patterns per message)
+- Batch Read calls (up to 5 files per message)
+- Batch WebFetch calls (3-5 URLs per message)
+
+**Just-in-time loading:**
+- Only read source files during accuracy verification
+- Only read related docs during cross-reference checks
+- Load based on verification_depth setting
 ```
