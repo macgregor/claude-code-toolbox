@@ -79,7 +79,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "document-reviewer",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -90,7 +90,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "document-reviewer",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
