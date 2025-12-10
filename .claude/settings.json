@@ -8,18 +8,6 @@
     "deny": [],
     "ask": []
   },
-  "env": {
-    "CLAUDE_TOOLBOX_DEBUG": "1"
-  },
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": ".claude/scripts/check-plugin-sync.sh"
-      }]
-    }]
-  },
   "statusLine": {
     "type": "command",
     "command": "ai-assisted-development/scripts/debug/statusline.sh"
