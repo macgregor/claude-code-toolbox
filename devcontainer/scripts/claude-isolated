@@ -20,7 +20,9 @@ set -euo pipefail
 # Constants
 IMAGE_NAME="localhost/claude-isolated:latest"
 VOLUME_NAME="claude-home"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlink to get actual script location
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 CONTAINERFILE_DIR="${SCRIPT_DIR}/.."
 
 # Colors for output
@@ -103,7 +105,11 @@ fi
 
 # Build if image doesn't exist or if rebuild requested
 if [ "$REBUILD" = true ] || ! podman image exists "$IMAGE_NAME"; then
-    [ "$REBUILD" = true ] && info "Rebuilding image..." || info "Building image..."
+    if [ "$REBUILD" = true ]; then
+        info "Rebuilding image..."
+    else
+        info "Building image..."
+    fi
 
     if podman build \
         --build-arg HOST_UID="$(id -u)" \
