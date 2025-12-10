@@ -157,10 +157,23 @@ def handle_stop_event(hook_input):
 
 
 def handle_session_start(hook_input):
-    """Handle SessionStart event."""
-    log_path = log_hook_event("SessionStart", hook_input)
-    print(f"[SessionStart] New session starting")
-    print(f"Logged to: {log_path}")
+    """Handle SessionStart - setup TOOLBOX_ROOT and create events dir."""
+    try:
+        cwd = hook_input.get("cwd")
+        env_file = os.environ.get("CLAUDE_ENV_FILE")
+
+        # Write TOOLBOX_ROOT to env file
+        if env_file and cwd:
+            with open(env_file, 'a') as f:
+                f.write(f'export TOOLBOX_ROOT="{cwd}"\n')
+
+        # Create .toolbox/events directory
+        if cwd:
+            events_dir = Path(cwd) / ".toolbox" / "events"
+            events_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(f"[SessionStart] ERROR: {e}", file=sys.stderr)
+
     sys.exit(0)
 
 
