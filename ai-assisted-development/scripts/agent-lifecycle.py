@@ -197,27 +197,36 @@ def handle_subagent_stop(hook_input):
     # Get transcript path
     transcript_path = hook_input.get("agent_transcript_path")
     if not transcript_path:
-        print(f"[SubagentStop] ERROR: No agent_transcript_path in hook input", file=sys.stderr)
-        sys.exit(2)
+        print(f"[SubagentStop] No transcript path, skipping output extraction", file=sys.stderr)
+        sys.exit(0)
 
-    # Extract JSON
-    data = extract_json_from_transcript(transcript_path)
+    # Only extract JSON for document-reviewer agent
+    # Other agents may not output pure JSON
+    if agent_name == "document-reviewer":
+        try:
+            # Extract JSON
+            data = extract_json_from_transcript(transcript_path)
 
-    # Create output directory
-    output_dir = Path(f"/tmp/{agent_name}-output")
-    output_dir.mkdir(parents=True, exist_ok=True)
+            # Create output directory
+            output_dir = Path(f"/tmp/{agent_name}-output")
+            output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate filename
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    filename = f"{agent_name}-{timestamp}.json"
-    output_path = output_dir / filename
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+            filename = f"{agent_name}-{timestamp}.json"
+            output_path = output_dir / filename
 
-    # Write output
-    with open(output_path, 'w') as f:
-        json.dump(data, f, indent=2)
+            # Write output
+            with open(output_path, 'w') as f:
+                json.dump(data, f, indent=2)
 
-    print(f"[SubagentStop] {agent_name} completed")
-    print(f"Output: {output_path}")
+            print(f"[SubagentStop] {agent_name} completed")
+            print(f"Output: {output_path}")
+        except Exception as e:
+            print(f"[SubagentStop] Failed to extract JSON: {e}", file=sys.stderr)
+    else:
+        print(f"[SubagentStop] {agent_name} completed (no JSON extraction)")
+
     print(f"Logged to: {log_path}")
     sys.exit(0)
 
