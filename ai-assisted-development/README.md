@@ -65,6 +65,42 @@ The agent:
 4. Selective deep reads of 2-3 key files
 5. Related repository extraction
 
+### Document Reviewer Agent
+
+**Purpose:** Analyzes document quality across multiple dimensions and produces JSON reports with confidence-scored recommendations. Read-only analysis for automated quality assessment.
+
+**Usage:**
+```
+Task(subagent_type="document-reviewer", prompt="Review <path> [depth]")
+```
+
+**Examples:**
+```
+Task(subagent_type="document-reviewer", prompt="Review docs/architecture.md")
+Task(subagent_type="document-reviewer", prompt="Quick review of README.md")
+Task(subagent_type="document-reviewer", prompt="Thorough review of docs/api.md")
+```
+
+**Features:**
+- Read-only analysis (no edits)
+- 7 quality dimensions: clarity, accuracy, consistency, redundancy, cross-references, detail level, markdown
+- Three-tier confidence scoring (high/medium/low)
+- JSON reports in `/tmp/document-reviews/`
+- Configurable verification depth (quick/standard/thorough)
+
+**Model:** Sonnet (analysis/validation task)
+
+**Output:** JSON report at `/tmp/document-reviews/{basename}-{date}-{time}.json` containing:
+- Issue list with confidence-scored recommendations
+- Per-category quality scores (0-10 scale)
+- Summary statistics (total issues, high-confidence fixes, needs manual review)
+- Overall quality score
+
+**Verification Depths:**
+- **quick**: Surface checks (paths exist, links valid, obvious issues)
+- **standard**: Semantic checks (read referenced files, verify signatures)
+- **thorough**: Deep analysis (code logic, comprehensive cross-checking)
+
 ## Report Format
 
 Both agents produce markdown reports in `docs/research/<type>/` following standardized templates:
