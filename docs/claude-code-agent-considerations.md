@@ -2,7 +2,7 @@
 
 **Document Purpose**: Comprehensive reference for designing high-quality Claude Code agents  
 **Target Audience**: AI systems and developers building agent markdown files  
-**Last Updated**: 2025-12-06
+**Last Updated**: 2025-12-09
 
 ---
 
@@ -28,9 +28,12 @@
 - Markdown files with YAML frontmatter in `.claude/agents/` or plugin `agents/` directory
 - Isolated context windows, specialized system prompts, configurable tools
 - Spawned via Task tool: `Task(subagent_type="agent-name", prompt="task description")`
-- Support resumable conversations via `resume` parameter
+- Support resumable conversations via `resume` parameter, requires `agentId` which is returned in the message when the agent is originally invoked
 - Model selection: `sonnet`, `opus`, `haiku`, or `inherit` from parent
 - Built-in agents: `general-purpose`, `plan`, `explore`
+    - `plan` subagent: use during plan mode, can also be invoked. conduct research and gather information about your codebase before presenting a plan
+    - `explore` subagent: lightweight agent optimized for searching and analyzing codebases. It operates in strict read-only mode and is designed for rapid file discovery and code exploration.
+- **Limitation**: subagents cannot spawn other subagents, use slash commands to orchestrate multiple agents.
 - **Reference**: [Subagents Documentation](https://code.claude.com/docs/en/sub-agents)
 
 **Skills**
@@ -39,6 +42,7 @@
 - Context-based automatic invocation (no explicit user request needed)
 - Stored in `~/.claude/skills/` (personal) or `.claude/skills/` (project)
 - Progressive disclosure: metadata → instructions → resources
+- **Limitation**: agents often dont reliably use skills without a lot of reinforcement using hooks and prompt engineering to encourage specific skill usage. For now its better not to use skills for agents and instead inline prompts instead.
 - **Reference**: [Skills Documentation](https://code.claude.com/docs/en/skills)
 
 **Hooks**
@@ -53,7 +57,7 @@
 - Bundle commands, agents, MCP servers, hooks into distributable packages
 - Structure: `.claude-plugin/plugin.json` + `marketplace.json`
 - Install via `/plugin` command
-- `${CLAUDE_PLUGIN_ROOT}` environment variable for portable paths
+- `${CLAUDE_PLUGIN_ROOT}` environment variable for portable paths (**NOTE** currently only available to scripts executed by hooks, if an agent manually runs a bash command it will not have access to this env variable out of the box)
 - `strict` flag controls manifest inheritance
 - **Reference**: [Plugin Marketplaces](https://docs.claude.com/en/docs/claude-code/plugin-marketplaces)
 
@@ -62,6 +66,7 @@
 - YAML frontmatter: `description`, `allowed-tools`, `model`, `argument-hint`
 - Invoked via `/command-name` or programmatically via SlashCommand tool
 - Can trigger agents, execute workflows, or run specific tasks
+- good for orchestration
 - **Reference**: [Plugin Structure](https://claude-plugins.dev/skills/@anthropics/claude-code/plugin-structure)
 
 **MCP (Model Context Protocol)**
@@ -76,6 +81,7 @@
 - Hierarchical: enterprise → user → project levels
 - Cross-session state persistence for agent coordination
 - Acts as external memory for multi-agent workflows
+- reference common files like `@docs/architecture.md`
 - **Reference**: [Memory Management](https://code.claude.com/docs/en/memory)
 
 ---
@@ -326,11 +332,13 @@ DO NOT execute tools sequentially when they can run in parallel.
 - Load resources as-needed
 - Minimal token usage enables large agent libraries
 
-**AGENTS.md Pattern**:
+**AGENTS.md/CLAUDE.md Pattern**:
 - Lightweight, project-specific instruction format
 - Quick parsing without verbose documentation
 - Dos/don'ts with version-specific instructions
 - File-scoped commands (type check, format, lint per file)
+- tool agnostic verions: AGENTS.md
+- claude code version: CLAUDE.md
 
 ---
 
