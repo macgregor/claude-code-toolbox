@@ -12,15 +12,7 @@ from pathlib import Path
 
 def main():
     """Read hook input and dispatch to appropriate handler."""
-    # Read hook input from stdin
     hook_input = json.load(sys.stdin)
-
-    # Log input for debugging (TEMPORARY - remove after validation)
-    debug_log = Path("/tmp/hook-debug.log")
-    with open(debug_log, "a") as f:
-        f.write(f"\n=== Hook Input ===\n")
-        f.write(json.dumps(hook_input, indent=2))
-        f.write("\n")
 
     # Dispatch based on event
     event_name = hook_input.get("hook_event_name")
@@ -57,6 +49,37 @@ def extract_agent_name(hook_input):
     return agent_name
 
 
+def extract_json_from_transcript(transcript_path):
+    """Extract final assistant message from agent transcript and parse as JSON."""
+    try:
+        with open(transcript_path) as f:
+            transcript = json.load(f)
+    except Exception as e:
+        print(f"[SubagentStop] ERROR: Cannot read transcript: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    # Get last assistant message
+    agent_output = None
+    for message in reversed(transcript):
+        if message.get("role") == "assistant":
+            agent_output = message.get("content", "")
+            break
+
+    if not agent_output:
+        print(f"[SubagentStop] ERROR: No assistant message in transcript", file=sys.stderr)
+        sys.exit(2)
+
+    # Parse as JSON
+    try:
+        data = json.loads(agent_output)
+        return data
+    except json.JSONDecodeError as e:
+        print(f"[SubagentStop] ERROR: Invalid JSON in agent output", file=sys.stderr)
+        print(f"JSON error: {e}", file=sys.stderr)
+        print(f"Agent output preview: {agent_output[:200]}...", file=sys.stderr)
+        sys.exit(2)
+
+
 def handle_start(hook_input):
     """Handle SubagentStart event."""
     agent_name = extract_agent_name(hook_input)
@@ -72,7 +95,32 @@ def handle_start(hook_input):
 
 def handle_stop(hook_input):
     """Handle SubagentStop event."""
-    print(f"[SubagentStop] Completed")
+    agent_name = extract_agent_name(hook_input)
+
+    # Get transcript path
+    transcript_path = hook_input.get("agent_transcript_path")
+    if not transcript_path:
+        print(f"[SubagentStop] ERROR: No agent_transcript_path in hook input", file=sys.stderr)
+        sys.exit(2)
+
+    # Extract JSON
+    data = extract_json_from_transcript(transcript_path)
+
+    # Create output directory
+    output_dir = Path(f"/tmp/{agent_name}-output")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    filename = f"{agent_name}-{timestamp}.json"
+    output_path = output_dir / filename
+
+    # Write output
+    with open(output_path, 'w') as f:
+        json.dump(data, f, indent=2)
+
+    print(f"[SubagentStop] {agent_name} completed")
+    print(f"Output: {output_path}")
     sys.exit(0)
 
 
