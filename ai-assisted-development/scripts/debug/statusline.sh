@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# Only show debug info if debug mode enabled
-if [ -z "$CLAUDE_TOOLBOX_DEBUG" ]; then
-  exit 0
-fi
-
 # Parse session data from stdin
 SESSION_DATA=$(cat)
-SESSION_ID=$(echo "$SESSION_DATA" | jq -r '.session_id // ""')
-TRANSCRIPT=$(echo "$SESSION_DATA" | jq -r '.transcript_path // ""')
+CWD=$(echo "$SESSION_DATA" | jq -r '.cwd // ""')
 
 # Get plugin metadata
 PLUGIN_ID="ai-assisted-development@claude-code-toolbox"
@@ -17,30 +11,38 @@ VERSION=$(jq -r ".plugins[\"$PLUGIN_ID\"].version // \"unknown\"" "$INSTALLED_JS
 INSTALLED_SHA=$(jq -r ".plugins[\"$PLUGIN_ID\"].gitCommitSha // \"unknown\"" "$INSTALLED_JSON" 2>/dev/null)
 INSTALL_PATH=$(jq -r ".plugins[\"$PLUGIN_ID\"].installPath // \"\"" "$INSTALLED_JSON" 2>/dev/null)
 
-# Get current trace ID by reading the last user message from transcript
-TRACE_ID=""
-if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
-  # Find the most recent user message (not a tool result)
-  # User messages have string content, tool results have array content
-  TRACE_ID=$(grep '"type":"user"' "$TRANSCRIPT" | tail -100 | jq -r 'select((.message.content | type) == "string") | .uuid' | tail -1)
+# Check if we're in dev mode (installed SHA != current git HEAD)
+DEV_WARNING=""
+if [ -n "$INSTALL_PATH" ]; then
+  CURRENT_SHA=$(cd "$INSTALL_PATH" && git rev-parse HEAD 2>/dev/null)
+  if [ -n "$CURRENT_SHA" ] && [ "$INSTALLED_SHA" != "$CURRENT_SHA" ]; then
+    DEV_WARNING=" ⚠️"
+  fi
+fi
+
+# Get current request ID
+REQUEST_ID=""
+REQUEST_DIR=""
+if [ -n "$CWD" ] && [ -f "$CWD/.toolbox/events/.current-request-id" ]; then
+  REQUEST_ID=$(cat "$CWD/.toolbox/events/.current-request-id" 2>/dev/null)
+  if [ -n "$REQUEST_ID" ]; then
+    REQUEST_DIR="$CWD/.toolbox/events/$REQUEST_ID"
+  fi
 fi
 
 # Build status line
 if [ -z "$VERSION" ] || [ "$VERSION" = "unknown" ] || [ -z "$INSTALL_PATH" ]; then
-  # Plugin not installed
   echo "${PLUGIN_ID}: ⚠️  Plugin not installed."
 else
-  if [ -n "$TRACE_ID" ]; then
-    # Build extraction command with absolute path
-    EXTRACT_SCRIPT="$INSTALL_PATH/scripts/debug/extract-trace.sh"
-    # Abbreviate home directory for display
-    EXTRACT_DISPLAY="${EXTRACT_SCRIPT/#$HOME/\~}"
+  echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7})${DEV_WARNING}"
 
-    # Show version + trace info
-    echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | 🔍 Trace: [${TRACE_ID:0:8}]"
-    echo "💾 $EXTRACT_DISPLAY ${TRACE_ID:0:8}"
+  if [ -n "$REQUEST_ID" ]; then
+    # Show current request
+    echo "📁 Request: ${REQUEST_ID}"
+    # Abbreviate home directory for display
+    REQUEST_DISPLAY="${REQUEST_DIR/#$HOME/\~}"
+    echo "💾 $REQUEST_DISPLAY/"
   else
-    # Just show version
-    echo "${PLUGIN_ID}: v${VERSION} (${INSTALLED_SHA:0:7}) | 🐛 Debug mode active"
+    echo "📁 No active request"
   fi
 fi
