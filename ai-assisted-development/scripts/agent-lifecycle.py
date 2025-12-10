@@ -250,44 +250,66 @@ def handle_subagent_start(hook_input):
 
 
 def handle_subagent_stop(hook_input):
-    """Handle SubagentStop event."""
-    log_path = log_hook_event("SubagentStop", hook_input)
-    agent_name = extract_agent_name(hook_input)
+    """Handle SubagentStop - copy transcript, extract context/work tags."""
+    try:
+        toolbox_root = os.environ.get("TOOLBOX_ROOT")
+        if not toolbox_root:
+            sys.exit(0)
 
-    # Get transcript path
-    transcript_path = hook_input.get("agent_transcript_path")
-    if not transcript_path:
-        print(f"[SubagentStop] No transcript path, skipping output extraction", file=sys.stderr)
-        sys.exit(0)
+        request_id = get_current_request_id(toolbox_root)
+        if not request_id:
+            sys.exit(0)
 
-    # Only extract JSON for document-reviewer agent
-    # Other agents may not output pure JSON
-    if agent_name == "document-reviewer":
-        try:
-            # Extract JSON
-            data = extract_json_from_transcript(transcript_path)
+        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+        agent_id = hook_input.get("agent_id", "unknown")
+        agent_type = hook_input.get("agent_type", "unknown")
+        agent_transcript_path = hook_input.get("agent_transcript_path")
 
-            # Create output directory
-            output_dir = Path(f"/tmp/{agent_name}-output")
-            output_dir.mkdir(parents=True, exist_ok=True)
+        if not agent_transcript_path or not Path(agent_transcript_path).exists():
+            sys.exit(0)
 
-            # Generate filename
-            timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-            filename = f"{agent_name}-{timestamp}.json"
-            output_path = output_dir / filename
+        # Copy agent transcript
+        transcript_copy = request_dir / "session-logs" / f"agent-{agent_id}.jsonl"
+        shutil.copy2(agent_transcript_path, transcript_copy)
 
-            # Write output
-            with open(output_path, 'w') as f:
-                json.dump(data, f, indent=2)
+        # Extract final agent output
+        with open(agent_transcript_path, 'r') as f:
+            lines = f.readlines()
 
-            print(f"[SubagentStop] {agent_name} completed")
-            print(f"Output: {output_path}")
-        except Exception as e:
-            print(f"[SubagentStop] Failed to extract JSON: {e}", file=sys.stderr)
-    else:
-        print(f"[SubagentStop] {agent_name} completed (no JSON extraction)")
+        final_output = ""
+        for line in reversed(lines):
+            msg = json.loads(line)
+            if msg.get("type") == "assistant":
+                # Extract text from content blocks (content is an array)
+                content_blocks = msg.get("message", {}).get("content", [])
+                for block in content_blocks:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        final_output += block.get("text", "")
+                break
 
-    print(f"Logged to: {log_path}")
+        # Parse and append context tags
+        contexts = parse_context_tags(final_output)
+        if contexts:
+            context_file = request_dir / "context.md"
+            with open(context_file, 'a') as f:
+                f.write(f'\n<agent-{agent_id} type="{agent_type}">\n')
+                for context in contexts:
+                    f.write(context + '\n')
+                f.write(f'</agent-{agent_id}>\n')
+
+        # Parse and write work files
+        work_items = parse_work_tags(final_output)
+        for item in work_items:
+            work_path = request_dir / item["relpath"]
+            work_path.parent.mkdir(parents=True, exist_ok=True)
+            work_path.write_text(item["content"])
+
+        # Log to request's hook-events.jsonl
+        append_to_request_events(hook_input, toolbox_root)
+
+    except Exception as e:
+        print(f"[SubagentStop] ERROR: {e}", file=sys.stderr)
+
     sys.exit(0)
 
 
