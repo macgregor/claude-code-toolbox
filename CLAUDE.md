@@ -6,6 +6,9 @@ The claude-code-toolbox is meant to be an incremental development approach to pr
 
 ## Context Loading
 
+**Always Load**
+* @ARCHITECTURE.md
+
 **Load when developing plugin features, modifying agents**:
 - @docs/claude-code-reference.md - Claude Code platform features, limitations, best practices
 - @docs/agent-orchestration-patterns.md - Custom multi-agent coordination patterns (optional, for advanced workflows)
