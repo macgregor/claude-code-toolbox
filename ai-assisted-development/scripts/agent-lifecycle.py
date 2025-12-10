@@ -124,19 +124,13 @@ def main():
 
 def handle_pre_tool_use(hook_input):
     """Handle PreToolUse event."""
-    log_path = log_hook_event("PreToolUse", hook_input)
-    tool_name = hook_input.get("tool_name", "unknown")
-    print(f"[PreToolUse] Tool: {tool_name}")
-    print(f"Logged to: {log_path}")
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
 def handle_post_tool_use(hook_input):
     """Handle PostToolUse event."""
-    log_path = log_hook_event("PostToolUse", hook_input)
-    tool_name = hook_input.get("tool_name", "unknown")
-    print(f"[PostToolUse] Tool: {tool_name}")
-    print(f"Logged to: {log_path}")
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
@@ -270,32 +264,37 @@ def handle_session_start(hook_input):
 
 def handle_pre_compact(hook_input):
     """Handle PreCompact event."""
-    log_path = log_hook_event("PreCompact", hook_input)
-    print(f"[PreCompact] Context compaction starting")
-    print(f"Logged to: {log_path}")
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
 def handle_notification(hook_input):
     """Handle Notification event."""
-    log_path = log_hook_event("Notification", hook_input)
-    notification_type = hook_input.get("notification_type", "unknown")
-    print(f"[Notification] Type: {notification_type}")
-    print(f"Logged to: {log_path}")
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
 def handle_subagent_start(hook_input):
-    """Handle SubagentStart event (new hook as of ~3 weeks ago)."""
-    log_path = log_hook_event("SubagentStart", hook_input)
-    agent_name = extract_agent_name(hook_input)
+    """Handle SubagentStart event."""
+    append_to_request_events(hook_input)
+    sys.exit(0)
 
-    if agent_name:
-        print(f"[SubagentStart] {agent_name} starting")
-    else:
-        print(f"[SubagentStart] Subagent starting")
 
-    print(f"Logged to: {log_path}")
+def handle_post_tool_use_failure(hook_input):
+    """Handle PostToolUseFailure event."""
+    append_to_request_events(hook_input)
+    sys.exit(0)
+
+
+def handle_permission_request(hook_input):
+    """Handle PermissionRequest event."""
+    append_to_request_events(hook_input)
+    sys.exit(0)
+
+
+def handle_session_end(hook_input):
+    """Handle SessionEnd event."""
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
