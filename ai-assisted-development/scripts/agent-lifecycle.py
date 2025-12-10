@@ -141,10 +141,51 @@ def handle_post_tool_use(hook_input):
 
 
 def handle_user_prompt_submit(hook_input):
-    """Handle UserPromptSubmit event."""
-    log_path = log_hook_event("UserPromptSubmit", hook_input)
-    print(f"[UserPromptSubmit] User prompt received")
-    print(f"Logged to: {log_path}")
+    """Handle UserPromptSubmit - create request, initialize context.md."""
+    try:
+        toolbox_root = os.environ.get("TOOLBOX_ROOT")
+        if not toolbox_root:
+            sys.exit(0)
+
+        # Generate request ID
+        request_id = generate_request_id(hook_input)
+
+        # Write to .current-request-id
+        events_dir = Path(toolbox_root) / ".toolbox" / "events"
+        events_dir.mkdir(parents=True, exist_ok=True)
+        current_id_file = events_dir / ".current-request-id"
+        current_id_file.write_text(request_id)
+
+        # Create request directory
+        request_dir = create_request_directory(toolbox_root, request_id)
+
+        # Initialize context.md
+        prompt = hook_input.get("prompt", "")
+        context_file = request_dir / "context.md"
+        context_file.write_text(f"""<userPrompt>
+{prompt}
+</userPrompt>
+
+<!-- Hooks append agent context below as agents complete -->
+""")
+
+        # Extract start UUID from session log
+        transcript_path = hook_input.get("transcript_path")
+        if transcript_path and Path(transcript_path).exists():
+            with open(transcript_path, 'r') as f:
+                lines = f.readlines()
+                if lines:
+                    last_msg = json.loads(lines[-1])
+                    start_uuid = last_msg.get("uuid", "")
+                    if start_uuid:
+                        (request_dir / ".start-uuid").write_text(start_uuid)
+
+        # Log to request's hook-events.jsonl
+        append_to_request_events(hook_input, toolbox_root)
+
+    except Exception as e:
+        print(f"[UserPromptSubmit] ERROR: {e}", file=sys.stderr)
+
     sys.exit(0)
 
 
