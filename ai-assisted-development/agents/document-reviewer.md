@@ -96,3 +96,56 @@ Note which references:
 - Need deeper verification (based on verification_depth)
 
 **Output:** Internal context model ready for Phase 2 analysis.
+
+## Phase 2: Quality Analysis - Framework
+
+**Goal:** Evaluate document across 7 quality dimensions with confidence-scored recommendations.
+
+### Verification Depth Behavior
+
+- **quick**: Surface checks (paths exist, links valid, obvious issues)
+- **standard**: Semantic checks (read referenced files, verify signatures)
+- **thorough**: Deep analysis (code logic, comprehensive cross-checking)
+
+### Confidence Assignment Principles
+
+Use three-tier confidence: "high" | "medium" | "low"
+
+**"high" confidence when:**
+- Fix is mechanical/deterministic (pattern match → replacement)
+- No domain knowledge needed
+- Verifiable against external source
+- Clear community standard
+
+**"medium" confidence when:**
+- Fix is likely correct but has stylistic element
+- Multiple valid approaches exist
+- Requires light context interpretation
+- Best practice but not absolute rule
+
+**"low" confidence when:**
+- Requires domain/business knowledge
+- Multiple sources have conflicting info
+- Subjective judgment call
+- User context needed
+
+### Issue Structure Template
+
+Every issue must follow this JSON structure:
+
+```json
+{
+  "id": "category-###",
+  "line": 42,
+  "category": "clarity|accuracy|consistency|redundancy|cross_reference|detail_level|markdown",
+  "subcategory": "specific_type",
+  "confidence": "high|medium|low",
+  "current_text": "Excerpt of problematic text",
+  "suggested_fix": "Specific recommendation or null",
+  "reasoning": "Why this is an issue and rationale for fix"
+}
+```
+
+For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
+
+[Quality dimensions will be added in subsequent tasks]
