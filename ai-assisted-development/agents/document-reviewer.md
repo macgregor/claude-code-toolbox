@@ -48,7 +48,233 @@ Produce structured JSON report and save to `/tmp/document-reviews/`.
 ### Step 1: Read Target Document
 
 ```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
+```
 Read(file_path=document_path)
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
 
 - Load full document content
@@ -68,8 +294,234 @@ Read(file_path=document_path)
 **Execute in PARALLEL** (single message, multiple tool calls):
 
 ```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
+```
 Grep(pattern=document_basename, output_mode="files_with_matches")  # Find docs linking TO us
 Grep(pattern="\\[.*\\]\\(.*\\.md\\)", path=document_path, output_mode="content")  # Find links FROM us
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
 
 From results:
@@ -86,8 +538,234 @@ From document content, extract:
 
 Verify references exist:
 ```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
+```
 Glob(pattern="**/mentioned-file.py")
 Grep(pattern="def function_name|class ClassName", output_mode="files_with_matches")
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
 
 Note which references:
@@ -133,6 +811,119 @@ Use three-tier confidence: "high" | "medium" | "low"
 
 Every issue must follow this JSON structure:
 
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```json
 {
   "id": "category-###",
@@ -144,6 +935,119 @@ Every issue must follow this JSON structure:
   "suggested_fix": "Specific recommendation or null",
   "reasoning": "Why this is an issue and rationale for fix"
 }
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
 
 For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
@@ -160,6 +1064,119 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Unclear headings → suggest more descriptive alternatives
 
 **Example issue:**
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```json
 {
   "id": "clarity-001",
@@ -171,6 +1188,119 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
   "suggested_fix": "The system processes requests",
   "reasoning": "Active voice is clearer and more direct"
 }
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
 
 ### Dimension 2: Accuracy Verification
@@ -198,6 +1328,119 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Retry transient failures once
 
 **Example issue:**
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```json
 {
   "id": "accuracy-001",
@@ -211,6 +1454,119 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 }
 ```
 
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
+```
+
 ### Dimension 3: Internal Consistency
 
 **Check for:**
@@ -221,6 +1577,119 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - Examples contradicting stated principles
 
 **Example issue:**
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```json
 {
   "id": "consistency-001",
@@ -232,4 +1701,117 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
   "suggested_fix": "Normalize to 'subagent' (most common)",
   "reasoning": "Inconsistent terminology reduces clarity"
 }
+```
+
+### Dimension 4: Redundancy Elimination
+
+**Check for:**
+- Repeated information within document
+- Sections saying same thing differently
+- Duplicate examples
+
+**Example issue:**
+```json
+{
+  "id": "redundancy-001",
+  "lines": [45, 203],
+  "category": "redundancy",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Sections 3.2 and 8.1 contain identical workflow explanation",
+  "suggested_fix": "Remove duplicate in section 8.1, reference section 3.2",
+  "reasoning": "Exact duplication reduces maintainability"
+}
+```
+
+### Dimension 5: Cross-Reference Validation (DRY)
+
+**Check for:**
+- Content duplicated across documents
+- Determine source-of-truth using heuristics:
+  - Document type (specialized > general)
+  - Depth of coverage (detailed > brief)
+  - Recency (recently updated > stale)
+  - Explicit frontmatter claim (`source-of-truth-for: [topic]`)
+
+**Example issues:**
+```json
+{
+  "id": "cross-ref-001",
+  "lines": [200, 215],
+  "category": "cross_reference",
+  "subcategory": "duplicate_content",
+  "confidence": "high",
+  "current_text": "Lines duplicate architecture.md sections 3-4",
+  "suggested_fix": "Replace with: 'See [Agent Patterns](architecture.md#agent-patterns)'",
+  "reasoning": "architecture.md is source-of-truth: specialized, detailed, recent"
+},
+{
+  "id": "cross-ref-002",
+  "lines": [88, 92],
+  "category": "cross_reference",
+  "subcategory": "unclear_source_of_truth",
+  "confidence": "low",
+  "current_text": "Similar content in design.md and tutorial.md",
+  "suggested_fix": null,
+  "reasoning": "Both equally authoritative - manual decision needed"
+}
+```
+
+### Dimension 6: Appropriate Detail Level
+
+**Check for:**
+- Detail mismatched to document type
+- Low-value diagrams
+
+**Document type expectations:**
+- Architecture: High-level design, NOT code
+- API: Signatures, parameters, examples required
+- Research: Findings, NOT implementation
+- Design: Approach, trade-offs, NOT code steps
+- README: Setup/usage examples required
+
+**Diagram quality:**
+- Single-node → Unnecessary
+- Lists without relationships → Should be bullets
+- Duplicates text → Redundant
+- Complex flows/architecture → Keep
+
+**Example issue:**
+```json
+{
+  "id": "detail-001",
+  "lines": [120, 145],
+  "category": "detail_level",
+  "subcategory": "excessive_detail",
+  "confidence": "high",
+  "current_text": "Architecture doc contains implementation code",
+  "suggested_fix": "Move code to appendix or implementation guide",
+  "reasoning": "Architecture docs focus on high-level design"
+}
+```
+
+### Dimension 7: Markdown Rendering Issues
+
+**Check for:**
+- Multi-line lists without blank lines
+- Broken internal links
+- Broken external links (WebFetch)
+- Code blocks missing language identifiers
+- Malformed tables/lists/headers
+- Unescaped special characters
+
+**Example issue:**
+```json
+{
+  "id": "markdown-001",
+  "lines": [55, 58],
+  "category": "markdown",
+  "subcategory": "list_formatting",
+  "confidence": "high",
+  "current_text": "Multi-line list without blank line separation",
+  "suggested_fix": "Add blank line between list items",
+  "reasoning": "Required for proper markdown rendering"
+}
+```
 ```
