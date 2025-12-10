@@ -190,10 +190,60 @@ def handle_user_prompt_submit(hook_input):
 
 
 def handle_stop_event(hook_input):
-    """Handle Stop event."""
-    log_path = log_hook_event("Stop", hook_input)
-    print(f"[Stop] Session stopping")
-    print(f"Logged to: {log_path}")
+    """Handle Stop - prune session log between start and end UUIDs."""
+    try:
+        toolbox_root = os.environ.get("TOOLBOX_ROOT")
+        if not toolbox_root:
+            sys.exit(0)
+
+        request_id = get_current_request_id(toolbox_root)
+        if not request_id:
+            sys.exit(0)
+
+        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+
+        # Read start UUID
+        start_uuid_file = request_dir / ".start-uuid"
+        if not start_uuid_file.exists():
+            sys.exit(0)
+
+        start_uuid = start_uuid_file.read_text().strip()
+
+        # Get end UUID from session log
+        transcript_path = hook_input.get("transcript_path")
+        if not transcript_path or not Path(transcript_path).exists():
+            sys.exit(0)
+
+        with open(transcript_path, 'r') as f:
+            lines = f.readlines()
+
+        messages = [json.loads(line) for line in lines]
+
+        # Find start and end indices
+        start_idx = None
+        end_idx = None
+        for idx, msg in enumerate(messages):
+            if msg.get("uuid") == start_uuid:
+                start_idx = idx
+            if msg == messages[-1]:
+                end_idx = idx
+
+        # Prune and save
+        if start_idx is not None and end_idx is not None:
+            pruned_messages = messages[start_idx:end_idx + 1]
+            session_id = hook_input.get("session_id", "unknown")
+            pruned_log_path = request_dir / "session-logs" / f"{session_id}-pruned.jsonl"
+
+            with open(pruned_log_path, 'w') as f:
+                for msg in pruned_messages:
+                    f.write(json.dumps(msg) + '\n')
+
+        # Log to request's hook-events.jsonl
+        append_to_request_events(hook_input, toolbox_root)
+
+    except Exception as e:
+        print(f"[Stop] ERROR: {e}", file=sys.stderr)
+
     sys.exit(0)
 
 
