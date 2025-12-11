@@ -351,36 +351,8 @@ def handle_notification(hook_input):
 
 
 def handle_subagent_start(hook_input):
-    """Handle SubagentStart - store agent_type for later retrieval."""
-    try:
-        toolbox_root = get_toolbox_root(hook_input)
-        if toolbox_root:
-            # Store agent_type for this agent_id so SubagentStop can retrieve it
-            agent_id = hook_input.get("agent_id")
-            agent_type = hook_input.get("agent_type", "unknown")
-
-            if agent_id and agent_type != "unknown":
-                agent_types_file = Path(toolbox_root) / ".toolbox" / "events" / ".agent-types.json"
-
-                # Load existing mappings
-                agent_types = {}
-                if agent_types_file.exists():
-                    try:
-                        agent_types = json.loads(agent_types_file.read_text())
-                    except Exception:
-                        pass
-
-                # Store this agent's type
-                agent_types[agent_id] = agent_type
-
-                # Write back
-                agent_types_file.parent.mkdir(parents=True, exist_ok=True)
-                agent_types_file.write_text(json.dumps(agent_types))
-
-        append_to_request_events(hook_input)
-    except Exception:
-        pass
-
+    """Handle SubagentStart event."""
+    append_to_request_events(hook_input)
     sys.exit(0)
 
 
@@ -415,18 +387,7 @@ def handle_subagent_stop(hook_input):
 
         request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
         agent_id = hook_input.get("agent_id", "unknown")
-
-        # SubagentStop doesn't provide agent_type, so retrieve from SubagentStart storage
         agent_type = hook_input.get("agent_type", "unknown")
-        if agent_type == "unknown":
-            agent_types_file = Path(toolbox_root) / ".toolbox" / "events" / ".agent-types.json"
-            if agent_types_file.exists():
-                try:
-                    agent_types = json.loads(agent_types_file.read_text())
-                    agent_type = agent_types.get(agent_id, "unknown")
-                except Exception:
-                    pass
-
         agent_transcript_path = hook_input.get("agent_transcript_path")
 
         if not agent_transcript_path or not Path(agent_transcript_path).exists():
