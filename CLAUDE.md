@@ -32,6 +32,19 @@ Load these when relevant to your task:
 - docs/plans/ - Implementation plans (may not reflect current state)
 - docs/research/ - Research documents (check before reinventing, but verify current state)
 
+## Keeping Documentation Up To Date
+Documents that need to be kept up to date when sources of truth change:
+- README.md
+- CONTRIBUTING.md
+- CLAUDE.md
+- ARCHITECTURE.md
+- docs/*.md (depth one only)
+- docs/appendix/*.md (depth one only)
+
+Do **NOT** update historical context docs when sources of truth change unless explicitly asked:
+- docs/plans/**
+- docs/research/**
+
 ## Critical Patterns
 
 ### Plugin vs Project Files

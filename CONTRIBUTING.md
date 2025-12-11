@@ -28,6 +28,32 @@ make install-plugin
 claude plugin list | grep ai-assisted-development
 ```
 
+## Plugin Structure
+
+```
+.claude-plugin/
+└── plugin.json              # Marketplace Manifest
+ai-assisted-development/
+├── .claude-plugin/
+│   └── plugin.json          # Plugin Manifest
+├── agents/                  # Subagent definitions
+├── hooks/
+│   └── hooks.json           # Hook configuration
+├── src/                     # Source code used by hooks and agents
+└── tests/                   # Unit tests
+```
+
+**What changes require reinstall:**
+- Adding/removing agents, commands, or skills (requires reinstall + Claude restart for discovery)
+- Modifying agent/command prompts (may require Claude restart due to caching)
+- Changing `plugin.json` metadata
+
+**What changes are "hot-swappable" (dangerous):**
+- Hook handler scripts (`src/*.py`, `src/*.sh`) - changes apply immediately on next hook execution
+- Hook configuration (`hooks/hooks.json`) - changes apply immediately on plugin reinstall
+
+Hot-swappable changes are dangerous because they take effect without a restart, potentially breaking your active session.
+
 ## Development Workflow
 
 ### Build and Install
@@ -63,7 +89,7 @@ Enable statusline hook that sows plugin version, installed vs current git SHA, r
 {
   "statusLine": {
     "type": "command",
-    "command": "ai-assisted-development/scripts/debug/statusline.sh"
+    "command": "ai-assisted-development/src/statusline.sh"
   }
 }
 ```
@@ -105,24 +131,35 @@ claude-isolated --rebuild /path/to/project
 
 See [docs/devcontainer.md](docs/devcontainer.md) for VS Code setup and internals.
 
-## Architecture
+## Safely Updating Hook Handlers
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and lifecycle tracking
-- [docs/claude-code-reference.md](docs/claude-code-reference.md) - Platform features and constraints
+**When to use this procedure:**
+- Modifying any file in `src/` that hooks execute
+- Changing `hooks/hooks.json` or `.claude/settings.json` hook configuration
+- Moving/renaming files referenced by hooks
 
-## Plugin Structure
+**Why this is dangerous:**
+Hook changes are hot-swappable - they take effect on next execution without restart. Breaking a hook script (wrong paths, errors, blocking behavior, non-0 exit codes) has the potential to completely break Claude Code.
 
-```
-ai-assisted-development/
-├── .claude-plugin/
-│   └── plugin.json          # Manifest
-├── agents/                  # Subagent definitions
-├── scripts/                 # Hook handlers
-│   └── agent-lifecycle.py   # Core lifecycle tracking
-└── hooks.json              # Hook configuration
-```
+**Safe procedure:**
 
-Changes to hooks or scripts require plugin reinstall (`make install-plugin`).
+1. Disable hooks in `hooks.json`. 
+    - If you arent sure which specific hooks to disable, replace entire contents with: `{"hooks": {}}`
+    - This ensures broken hooks can't execute
+2. Make code changes:
+    - Make absolutely sure the changes are functional, tests are passing
+    - triple check paths that go in `hooks.json` are correct for when installed as a plugin
+    - missing paths, script errors and non-0 error codes have the potential to completely break claude code
+3. Re-enable hooks.
+    - be 100% sure everything is correct before you re-enable any hooks 
+
+**Recovery if hooks break:**
+- You cannot fix from within Claude Code
+- Exit immediately (`/exit`)
+- Restore `hooks/hooks.json` to `{"hooks": {}}` in separate terminal
+- Reinstall plugin
+- Fix the broken script
+- Repeat safe procedure
 
 ## Development Gotchas
 

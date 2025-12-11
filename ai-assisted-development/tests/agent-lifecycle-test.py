@@ -17,7 +17,7 @@ from unittest.mock import patch
 # Import agent_lifecycle module
 spec = importlib.util.spec_from_file_location(
     "agent_lifecycle",
-    Path(__file__).parent.parent / "scripts" / "agent-lifecycle.py"
+    Path(__file__).parent.parent / "src" / "agent-lifecycle.py"
 )
 agent_lifecycle = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(agent_lifecycle)
