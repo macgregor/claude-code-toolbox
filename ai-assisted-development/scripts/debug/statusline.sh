@@ -3,6 +3,7 @@
 # Parse session data from stdin
 SESSION_DATA=$(cat)
 CWD=$(echo "$SESSION_DATA" | jq -r '.cwd // ""')
+SESSION_ID=$(echo "$SESSION_DATA" | jq -r '.session_id // ""')
 
 # Get plugin metadata
 PLUGIN_ID="ai-assisted-development@claude-code-toolbox"
@@ -21,11 +22,11 @@ if [ -n "$INSTALL_PATH" ]; then
   fi
 fi
 
-# Get current request ID
+# Get current request ID from global state
 REQUEST_ID=""
 REQUEST_DIR=""
-if [ -n "$CWD" ] && [ -f "$CWD/.toolbox/events/.current-request-id" ]; then
-  REQUEST_ID=$(cat "$CWD/.toolbox/events/.current-request-id" 2>/dev/null)
+if [ -n "$CWD" ] && [ -n "$SESSION_ID" ] && [ -f "$CWD/.toolbox/events/.global-state.json" ]; then
+  REQUEST_ID=$(jq -r ".session_requests[\"$SESSION_ID\"] // \"\"" "$CWD/.toolbox/events/.global-state.json" 2>/dev/null)
   if [ -n "$REQUEST_ID" ]; then
     REQUEST_DIR="$CWD/.toolbox/events/$REQUEST_ID"
   fi
