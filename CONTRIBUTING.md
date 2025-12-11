@@ -82,6 +82,9 @@ ln -s $(pwd)/devcontainer/scripts/claude-isolated-shell ~/.local/bin/claude-isol
 # Run isolated Claude Code
 claude-isolated /path/to/project
 
+# Connext a second terminal
+claude-isolated-shell /path/to/project
+
 # Rebuild container after changes
 claude-isolated --rebuild /path/to/project
 ```
