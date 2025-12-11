@@ -404,18 +404,23 @@ def handle_stop_event(hook_input):
         if not toolbox_root:
             sys.exit(0)
 
-        request_id = get_current_request_id(toolbox_root)
-        if not request_id:
-            sys.exit(0)
+        session_id = hook_input.get("session_id")
+        transcript_path = hook_input.get("transcript_path")
 
-        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+        with State(toolbox_root, session_id, transcript_path) as state:
+            # Get request_id and start_uuid from state
+            request_id = state._global.get("session_requests", {}).get(session_id)
+            if not request_id:
+                print(f"[Stop] No request_id for session {session_id}", file=sys.stderr)
+                sys.exit(0)
 
-        # Read start UUID
-        start_uuid_file = request_dir / ".start-uuid"
-        if not start_uuid_file.exists():
-            sys.exit(0)
+            request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
 
-        start_uuid = start_uuid_file.read_text().strip()
+            # Get start_uuid (auto-reconstructed if missing)
+            start_uuid = state["start_uuid"]
+            if not start_uuid:
+                print(f"[Stop] No start_uuid for request {request_id}", file=sys.stderr)
+                sys.exit(0)
 
         # Get end UUID from session log
         transcript_path = hook_input.get("transcript_path")
@@ -449,6 +454,8 @@ def handle_stop_event(hook_input):
         # Log to request's hook-events.jsonl
         append_to_request_events(hook_input, toolbox_root)
 
+    except ValueError as e:
+        print(f"[Stop] State ERROR: {e}", file=sys.stderr)
     except Exception as e:
         print(f"[Stop] ERROR: {e}", file=sys.stderr)
 
