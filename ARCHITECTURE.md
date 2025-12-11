@@ -6,7 +6,7 @@
 
 ## Overview
 
-Claude Code Toolbox provides infrastructure for multi-agent orchestration. The system uses [Claude Code hooks](docs/claude-code-reference.md#hooks) to observe agent execution and persist context, enabling agents to coordinate across sessions without tight coupling.
+Claude Code Toolbox provides infrastructure for agent coordination. The system uses [Claude Code hooks](docs/claude-code-reference.md#hooks) to observe agent execution and persist context, enabling agents to coordinate across sessions without tight coupling.
 
 ---
 
@@ -33,8 +33,8 @@ Capture what happens during a user request: what the user asked for, which agent
 
 Each request directory contains:
 - `context.md` - User prompt + agent context extracts
-- `work/` - Files agents create via `<work>` tags
-- `session-logs/` - Agent transcripts and pruned session log
+- `work/` - Files agents create via `<work filename="...">` tags
+- `session-logs/` - Agent transcripts (`agent-{id}.jsonl`) and pruned session log (`{session_id}-pruned.jsonl`)
 - `hook-events.jsonl` - Complete audit trail
 - `.state.json` - Request-scoped state (start_uuid, agent_types)
 
