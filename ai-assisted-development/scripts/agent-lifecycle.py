@@ -489,8 +489,27 @@ def handle_notification(hook_input):
 
 
 def handle_subagent_start(hook_input):
-    """Handle SubagentStart event."""
-    append_to_request_events(hook_input)
+    """Handle SubagentStart - store agent_type for later retrieval."""
+    try:
+        toolbox_root = get_toolbox_root(hook_input)
+        if not toolbox_root:
+            sys.exit(0)
+
+        session_id = hook_input.get("session_id")
+        transcript_path = hook_input.get("transcript_path")
+        agent_id = hook_input.get("agent_id")
+        agent_type = hook_input.get("agent_type", "unknown")
+
+        if agent_id and agent_type != "unknown":
+            with State(toolbox_root, session_id, transcript_path) as state:
+                state["agent_types"][agent_id] = agent_type
+
+        append_to_request_events(hook_input)
+    except ValueError as e:
+        print(f"[SubagentStart] State ERROR: {e}", file=sys.stderr)
+    except Exception as e:
+        print(f"[SubagentStart] ERROR: {e}", file=sys.stderr)
+
     sys.exit(0)
 
 
