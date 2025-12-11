@@ -16,7 +16,17 @@ from typing import Dict, Any, List, Callable
 
 
 class StateFile(dict):
-    """File-backed dict with auto-population on cache miss."""
+    """File-backed dict with auto-population on cache miss.
+
+    WARNING: Nested dict modifications don't trigger dirty flag.
+    Example problematic pattern:
+        state["agent_types"][agent_id] = type  # Won't mark dirty!
+
+    Workaround: Re-assign the entire dict:
+        agent_types = state["agent_types"]
+        agent_types[agent_id] = type
+        state["agent_types"] = agent_types  # Triggers dirty flag
+    """
 
     def __init__(self, path: Path):
         super().__init__()
@@ -34,7 +44,7 @@ class StateFile(dict):
         """Auto-populate from registered loader on cache miss."""
         if key in self._loaders:
             value = self._loaders[key]()
-            if value and value != "unknown":
+            if value is not None and value != "unknown":
                 self[key] = value
                 return value
         return None
@@ -60,6 +70,12 @@ class State:
         toolbox_root: Project root directory (from get_toolbox_root(hook_input))
         session_id: Session ID (from hook_input['session_id'])
         transcript_path: Path to session log (from hook_input['transcript_path'])
+
+    WARNING: agent_types is a nested dict that requires special handling.
+    Nested modifications DON'T trigger dirty flag. To modify agent_types:
+        agent_types = state["agent_types"]
+        agent_types[agent_id] = type
+        state["agent_types"] = agent_types  # Re-assign to trigger save
     """
 
     def __init__(self, toolbox_root: str, session_id: str, transcript_path: str = None):
