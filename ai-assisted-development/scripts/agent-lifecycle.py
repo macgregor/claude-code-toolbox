@@ -502,7 +502,9 @@ def handle_subagent_start(hook_input):
 
         if agent_id and agent_type != "unknown":
             with State(toolbox_root, session_id, transcript_path) as state:
-                state["agent_types"][agent_id] = agent_type
+                agent_types = state["agent_types"]
+                agent_types[agent_id] = agent_type
+                state["agent_types"] = agent_types
 
         append_to_request_events(hook_input)
     except ValueError as e:
