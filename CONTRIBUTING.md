@@ -56,10 +56,13 @@ Enable statusline with plugin version, trace ID, and log extraction:
 
 Example output:
 ```
-ai-assisted-development@0.1.0 | req: 2025-12-11T00-15-32_a1b2c3d4 | extract: ~/.claude/projects/.../session.jsonl | jq ...
+ai-assisted-development@claude-code-toolbox: v0.1.0
+📦 Installed: a1b2c3d
+📁 Request: 2025-12-11T00-15-32_e36738f5
+💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
 ```
 
-Shows plugin version, current request ID, and command to extract conversation logs.
+Shows plugin version, git SHA, current request ID, and request directory path.
 
 ### Isolated Development
 
