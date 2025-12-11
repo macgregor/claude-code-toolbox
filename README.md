@@ -35,36 +35,6 @@ claude
 
 Check `.toolbox/events/` for captured context and artifacts.
 
-### Debug Mode
-
-Enable statusline with plugin version, trace ID, and log extraction command:
-
-```json
-// .claude/settings.json or .claude/settings.local.json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "ai-assisted-development/scripts/debug/statusline.sh"
-  }
-}
-```
-
-See [Plugin Debug System](docs/plugin-debug-system.md).
-
-### Isolated Development (Optional)
-
-Run Claude Code in a container for filesystem isolation:
-
-```bash
-# One-time setup
-ln -s $(pwd)/devcontainer/scripts/claude-isolated ~/.local/bin/claude-isolated
-
-# Use
-claude-isolated /path/to/project
-```
-
-See [docs/devcontainer.md](docs/devcontainer.md) for VS Code integration.
-
 ## Documentation
 
 **Using:**

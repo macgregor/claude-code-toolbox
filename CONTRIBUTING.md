@@ -40,6 +40,22 @@ make test-lifecycle
 
 Tests use Python unittest. See `ai-assisted-development/tests/` for test files.
 
+### Debug Mode
+
+Enable statusline with plugin version, trace ID, and log extraction:
+
+```json
+// .claude/settings.json or .claude/settings.local.json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "ai-assisted-development/scripts/debug/statusline.sh"
+  }
+}
+```
+
+See [docs/plugin-debug-system.md](docs/plugin-debug-system.md) for details.
+
 ### Isolated Development
 
 Use the devcontainer for filesystem isolation:
