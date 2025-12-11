@@ -1,3 +1,17 @@
+---
+name: claude-code-reference
+description: >
+  Use when building Claude Code plugins or needing technical details on agents, hooks,
+  skills, performance optimization, or platform limitations. Comprehensive reference.
+categories: [reference, platform]
+tags: [hooks, agents, skills, plugins, performance, limitations]
+related_docs:
+  - ARCHITECTURE.md
+  - docs/appendix/hook-input-messages.md
+  - docs/appendix/session-log-messages.md
+complexity: advanced
+---
+
 # Claude Code Platform Reference
 
 **Purpose**: Technical reference for Claude Code platform features, limitations, and best practices

@@ -1,3 +1,16 @@
+---
+name: architecture
+description: >
+  Use when implementing new orchestration features or understanding how the lifecycle
+  tracking system works. Covers hook integration, request scoping, and file-based state.
+categories: [architecture, design]
+tags: [lifecycle, hooks, coordination, state-management]
+related_docs:
+  - docs/claude-code-reference.md
+  - CONTRIBUTING.md
+complexity: intermediate
+---
+
 # Architecture
 
 **Last Updated**: 2025-12-10

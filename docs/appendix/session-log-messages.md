@@ -1,3 +1,17 @@
+---
+name: session-log-messages
+description: >
+  Use when parsing session logs, implementing session resumption, or analyzing conversation
+  history. Documents all message types, schemas, and field meanings.
+categories: [reference, platform]
+tags: [session-logs, conversation, messages, debugging]
+related_docs:
+  - docs/claude-code-reference.md
+  - docs/appendix/hook-input-messages.md
+  - ARCHITECTURE.md
+complexity: intermediate
+---
+
 # Claude Code Session Log Messages
 
 **Last Updated**: 2025-12-10

@@ -1,3 +1,17 @@
+---
+name: contributing
+description: >
+  Use when setting up local development, running tests, building the plugin, or
+  understanding development workflow. Covers installation, testing, and common gotchas.
+categories: [workflow, development]
+tags: [setup, testing, building, devcontainer]
+related_docs:
+  - ARCHITECTURE.md
+  - docs/devcontainer.md
+  - docs/claude-code-reference.md
+complexity: basic
+---
+
 # Contributing
 
 Get the repository working locally.

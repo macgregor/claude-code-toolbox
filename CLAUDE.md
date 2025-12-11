@@ -74,3 +74,18 @@ Avoid hardcoding paths specific to development environment.
 **Guessing schemas**: Claude Code plugin.json, marketplace.json, hooks.json have specific formats - research first
 
 **Bypassing scripts**: Python scripts exist for deterministic operations - don't duplicate in agent prompts
+
+## YAML Frontmatter Template
+
+```yaml
+---
+name: document-name  # required: lowercase-with-hyphens, max 64 chars
+description: >  # required: when should AI load this? max 1024 chars
+  Clear statement of when AI should load this document.
+categories: [category1, category2]  # optional: broad classification
+tags: [tag1, tag2]  # optional: specific concepts
+related_docs:  # optional: relative paths from project root
+  - path/to/doc.md
+complexity: basic  # optional: basic|intermediate|advanced
+---
+```

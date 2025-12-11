@@ -1,3 +1,17 @@
+---
+name: hook-input-messages
+description: >
+  Use when implementing hooks or parsing hook event data. Documents all hook event types,
+  message schemas, and usage patterns for lifecycle tracking and automation.
+categories: [reference, platform]
+tags: [hooks, events, automation, lifecycle]
+related_docs:
+  - docs/claude-code-reference.md
+  - docs/appendix/session-log-messages.md
+  - ARCHITECTURE.md
+complexity: intermediate
+---
+
 # Claude Code Hook Input Messages
 
 **Last Updated**: 2025-12-10

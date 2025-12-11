@@ -1,3 +1,15 @@
+---
+name: devcontainer
+description: >
+  Use when setting up filesystem isolation for plugin development or working with
+  untrusted projects. Covers CLI and VS Code usage, customization, and architecture.
+categories: [workflow, development]
+tags: [isolation, containers, podman, testing]
+related_docs:
+  - CONTRIBUTING.md
+complexity: intermediate
+---
+
 # Devcontainer
 
 Filesystem-isolated Claude Code environment. Claude operates in a container with access only to your project directory—your host filesystem remains untouched. Config files (CLAUDE.md, skills, agents) sync from localhost via symlinks.

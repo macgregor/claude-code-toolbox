@@ -1,3 +1,13 @@
+---
+name: ai-learning-material
+description: >
+  Use when looking for educational resources on AI-assisted development, agentic workflows,
+  or Claude Code best practices. Curated list of books, blogs, videos, and repositories.
+categories: [reference, learning]
+tags: [education, resources, community]
+complexity: basic
+---
+
 # AI Learning Materials
 
 ## Books
