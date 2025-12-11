@@ -252,17 +252,6 @@ def create_request_directory(toolbox_root: str, request_id: str) -> Path:
     return request_dir
 
 
-def get_current_request_id(toolbox_root: str) -> str:
-    """Read current request ID from .toolbox/events/.current-request-id"""
-    try:
-        current_id_file = Path(toolbox_root) / ".toolbox" / "events" / ".current-request-id"
-        if current_id_file.exists():
-            return current_id_file.read_text().strip()
-    except Exception:
-        pass
-    return ""
-
-
 def append_to_request_events(hook_input: dict, toolbox_root: str = None):
     """Append hook event to request's hook-events.jsonl if request is active."""
     try:
@@ -271,9 +260,14 @@ def append_to_request_events(hook_input: dict, toolbox_root: str = None):
         if not toolbox_root:
             return
 
-        request_id = get_current_request_id(toolbox_root)
-        if not request_id:
-            return
+        session_id = hook_input.get("session_id")
+        transcript_path = hook_input.get("transcript_path")
+
+        # Use State to get request_id
+        with State(toolbox_root, session_id, transcript_path) as state:
+            request_id = state._global.get("session_requests", {}).get(session_id)
+            if not request_id:
+                return
 
         request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
         hook_events_file = request_dir / "hook-events.jsonl"
