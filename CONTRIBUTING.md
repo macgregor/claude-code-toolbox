@@ -54,7 +54,12 @@ Enable statusline with plugin version, trace ID, and log extraction:
 }
 ```
 
-See [docs/plugin-debug-system.md](docs/plugin-debug-system.md) for details.
+Example output:
+```
+ai-assisted-development@0.1.0 | req: 2025-12-11T00-15-32_a1b2c3d4 | extract: ~/.claude/projects/.../session.jsonl | jq ...
+```
+
+Shows plugin version, current request ID, and command to extract conversation logs.
 
 ### Isolated Development
 
@@ -92,3 +97,29 @@ ai-assisted-development/
 ```
 
 Changes to hooks or scripts require plugin reinstall (`make install-plugin`).
+
+## Development Gotchas
+
+### Claude File Locations
+
+**Plugin files** (in repository):
+- `ai-assisted-development/agents/foo.md` - Installed to `~/.claude/plugins/.../agents/foo.md`
+- Used by end users when plugin is installed
+
+**Project files** (in repository):
+- `.claude/agents/bar.md` - Local to this repository
+- Only available when developing this specific project
+
+When building the plugin, reason about paths as they'll exist on end users' systems, not your development environment.
+
+### Path Confusion
+
+Three path contexts exist:
+
+1. **Devcontainer paths**: `/workspace`, `/home/claude-user/.claude`
+2. **Localhost paths**: Your actual filesystem during local development
+3. **End user paths**: Where the plugin runs when installed
+
+Scripts and hooks must use paths that work for end users. Test in the devcontainer to catch localhost-specific assumptions.
+
+**Rule of thumb**: All paths should work as if running on an end user's system with the plugin installed via marketplace.
