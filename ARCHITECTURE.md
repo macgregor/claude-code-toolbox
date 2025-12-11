@@ -20,10 +20,10 @@ Capture what happens during a user request: what the user asked for, which agent
 
 **Request Scoping**: Each user prompt creates a request directory under `.toolbox/events/`. Everything related to that request—user prompt, agent outputs, session logs, hook events—goes there.
 
-**Hook Integration**: Lifecycle hooks (SessionStart, UserPromptSubmit, SubagentStop, Stop) observe execution and extract data:
+**Hook Integration**: Lifecycle hooks (SessionStart, UserPromptSubmit, SubagentStart, SubagentStop, Stop) observe execution and extract data:
 - User prompts captured in `context.md`
 - Agent `<context>` tags extracted and appended to `context.md`
-- Agent `<work relpath="...">` tags create files in `work/` directory
+- Agent `<work filename="...">` tags create files in `work/` directory
 - Session logs pruned to request boundaries
 - All hook events logged for debugging
 
@@ -36,7 +36,9 @@ Each request directory contains:
 - `work/` - Files agents create via `<work>` tags
 - `session-logs/` - Agent transcripts and pruned session log
 - `hook-events.jsonl` - Complete audit trail
-- `.start-uuid` - Session log boundary marker
+- `.state.json` - Request-scoped state (start_uuid, agent_types)
+
+Global state stored at `.toolbox/events/.global-state.json` maps session_id → request_id for concurrent session support
 
 ### Why This Design
 
