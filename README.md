@@ -37,14 +37,11 @@ Check `.toolbox/events/` for captured context and artifacts.
 
 ### Debug Mode
 
-Enable trace logging and version info:
+Enable statusline with plugin version, trace ID, and log extraction command:
 
 ```json
 // .claude/settings.json or .claude/settings.local.json
 {
-  "env": {
-    "CLAUDE_TOOLBOX_DEBUG": "1"
-  },
   "statusLine": {
     "type": "command",
     "command": "ai-assisted-development/scripts/debug/statusline.sh"
@@ -52,7 +49,7 @@ Enable trace logging and version info:
 }
 ```
 
-The statusline shows plugin version, trace ID, and log extraction command. See [Plugin Debug System](docs/plugin-debug-system.md).
+See [Plugin Debug System](docs/plugin-debug-system.md).
 
 ### Isolated Development (Optional)
 
