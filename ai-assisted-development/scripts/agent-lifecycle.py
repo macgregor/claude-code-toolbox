@@ -353,16 +353,13 @@ def handle_user_prompt_submit(hook_input):
         if not toolbox_root:
             sys.exit(0)
 
-        # Generate request ID
+        session_id = hook_input.get("session_id")
+        transcript_path = hook_input.get("transcript_path")
+
+        # Generate request ID (still needed for directory creation)
         request_id = generate_request_id(hook_input)
 
-        # Write to .current-request-id
-        events_dir = Path(toolbox_root) / ".toolbox" / "events"
-        events_dir.mkdir(parents=True, exist_ok=True)
-        current_id_file = events_dir / ".current-request-id"
-        current_id_file.write_text(request_id)
-
-        # Create request directory
+        # Create request directory structure
         request_dir = create_request_directory(toolbox_root, request_id)
 
         # Initialize context.md
@@ -375,20 +372,25 @@ def handle_user_prompt_submit(hook_input):
 <!-- Hooks append agent context below as agents complete -->
 """)
 
-        # Extract start UUID from session log
-        transcript_path = hook_input.get("transcript_path")
-        if transcript_path and Path(transcript_path).exists():
-            with open(transcript_path, 'r') as f:
-                lines = f.readlines()
-                if lines:
-                    last_msg = json.loads(lines[-1])
-                    start_uuid = last_msg.get("uuid", "")
-                    if start_uuid:
-                        (request_dir / ".start-uuid").write_text(start_uuid)
+        # Initialize state and store request_id + start_uuid
+        with State(toolbox_root, session_id, transcript_path) as state:
+            state.set_request_id(request_id)
+
+            # Extract start UUID from session log
+            if transcript_path and Path(transcript_path).exists():
+                with open(transcript_path, 'r') as f:
+                    lines = f.readlines()
+                    if lines:
+                        last_msg = json.loads(lines[-1])
+                        start_uuid = last_msg.get("uuid", "")
+                        if start_uuid:
+                            state["start_uuid"] = start_uuid
 
         # Log to request's hook-events.jsonl
         append_to_request_events(hook_input, toolbox_root)
 
+    except ValueError as e:
+        print(f"[UserPromptSubmit] State ERROR: {e}", file=sys.stderr)
     except Exception as e:
         print(f"[UserPromptSubmit] ERROR: {e}", file=sys.stderr)
 
