@@ -540,13 +540,22 @@ def handle_subagent_stop(hook_input):
         if not toolbox_root:
             sys.exit(0)
 
-        request_id = get_current_request_id(toolbox_root)
-        if not request_id:
-            sys.exit(0)
-
-        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+        session_id = hook_input.get("session_id")
+        transcript_path = hook_input.get("transcript_path")
         agent_id = hook_input.get("agent_id", "unknown")
-        agent_type = hook_input.get("agent_type", "unknown")
+
+        with State(toolbox_root, session_id, transcript_path) as state:
+            # Get request_id from state
+            request_id = state._global.get("session_requests", {}).get(session_id)
+            if not request_id:
+                print(f"[SubagentStop] No request_id for session {session_id}", file=sys.stderr)
+                sys.exit(0)
+
+            request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+
+            # Get agent_type from state (auto-reconstructed if missing)
+            agent_type = state["agent_types"].get(agent_id, "unknown")
+
         agent_transcript_path = hook_input.get("agent_transcript_path")
 
         if not agent_transcript_path or not Path(agent_transcript_path).exists():
@@ -605,6 +614,8 @@ def handle_subagent_stop(hook_input):
         # Log to request's hook-events.jsonl
         append_to_request_events(hook_input, toolbox_root)
 
+    except ValueError as e:
+        print(f"[SubagentStop] State ERROR: {e}", file=sys.stderr)
     except Exception as e:
         print(f"[SubagentStop] ERROR: {e}", file=sys.stderr)
 
