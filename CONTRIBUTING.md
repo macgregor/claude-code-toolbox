@@ -40,9 +40,9 @@ make test-lifecycle
 
 Tests use Python unittest. See `ai-assisted-development/tests/` for test files.
 
-### Debug Mode
+### Debug Status Line
 
-Enable statusline with plugin version, trace ID, and log extraction:
+Enable statusline hook that sows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
 
 ```json
 // .claude/settings.json or .claude/settings.local.json
@@ -69,8 +69,6 @@ ai-assisted-development@claude-code-toolbox: v0.1.0 ⚠️
 📁 Request: 2025-12-11T00-15-32_e36738f5
 💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
 ```
-
-Shows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
 
 ### Isolated Development
 

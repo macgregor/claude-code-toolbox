@@ -516,6 +516,13 @@ tools: [Read, Write, Edit, Bash, Grep, Glob]
 
 ---
 
+## Appendices
+
+- [Session Log Messages](appendix/session-log-messages.md) - Message formats for conversation history and session state
+- [Hook Input Messages](appendix/hook-input-messages.md) - Event notifications for automation and orchestration
+
+---
+
 ## References
 
 ### Official Documentation
