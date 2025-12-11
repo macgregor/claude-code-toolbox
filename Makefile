@@ -20,3 +20,11 @@ install-plugin: install-local-marketplace
 	-claude plugin rm ai-assisted-development@claude-code-toolbox
 	claude plugin marketplace update claude-code-toolbox
 	claude plugin install ai-assisted-development@claude-code-toolbox
+
+.PHONY: test
+test:
+	python -m unittest discover -s ai-assisted-development/tests -p "*-test.py" -v
+
+.PHONY: test-lifecycle
+test-lifecycle:
+	python -m unittest ai-assisted-development.tests.agent-lifecycle-test -v

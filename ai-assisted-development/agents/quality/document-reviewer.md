@@ -54,7 +54,7 @@ Understand document's purpose, relationships, and code references.
 Systematically evaluate across quality dimensions with confidence scoring.
 
 ### Phase 3: Report Generation
-Produce structured JSON report and save to `/tmp/document-reviews/`.
+Produce structured JSON report in final message.
 
 ## Phase 1: Context Discovery - Detailed Steps
 
@@ -363,13 +363,7 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 
 ## Phase 3: Report Generation
 
-**Goal:** Produce structured JSON report as final message.
-
-**CRITICAL OUTPUT REQUIREMENT:**
-- Your FINAL message must contain ONLY valid JSON
-- No explanatory text before or after the JSON
-- The hook will parse your entire final message as JSON
-- If JSON is invalid, the hook will block with Exit Code 2
+**Goal:** Produce context summary and structured JSON report as final message.
 
 ### Step 1: Calculate Scores
 
@@ -392,11 +386,23 @@ For multi-line issues, use `"lines": [start, end]` instead of `"line"`.
 - High-confidence fixes (confidence == "high")
 - Needs manual review (confidence == "low" or "medium")
 
-### Step 2: Build and Output JSON
+### Step 2: Build and Output Final Message
 
-Output exactly this JSON structure as your FINAL message:
+Your final message must contain TWO parts:
 
-```json
+**1. Context summary** - What you analyzed and found:
+```
+<context>
+Reviewed {document_path} ({line_count} lines, {doc_type} document)
+Found {total_issues} issues: {high} high-confidence, {medium} medium-confidence, {low} low-confidence
+Overall quality score: {score}/10
+Top issues: {category1} ({count1}), {category2} ({count2})
+</context>
+```
+
+**2. JSON report** - Structured findings wrapped in work tag:
+```
+<work filename="document-review-report.json">
 {
   "document": "path/to/document.md",
   "reviewed_at": "2025-12-09T14:30:22Z",
@@ -429,7 +435,14 @@ Output exactly this JSON structure as your FINAL message:
     "markdown": 9.5
   }
 }
+</work>
 ```
+
+**Critical requirements:**
+- Context must be concise (3-5 lines max)
+- JSON must be valid and complete
+- Filename is just the filename (framework handles storage location)
+- Framework will write JSON to `.toolbox/events/{request-id}/work/document-review-report.json`
 
 **No issues found:**
 - Return report with empty issues array
@@ -440,10 +453,10 @@ Output exactly this JSON structure as your FINAL message:
 
 **File type validation:**
 - Check file extension before review
-- If not `.md`: Output error JSON: `{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{type}"}`
+- If not `.md`: Output error JSON in work tag: `<work filename="error.json">{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{type}"}</work>`
 
 **Path validation:**
-- If document doesn't exist: Output error JSON: `{"error": "Document not found", "path": "{path}"}`
+- If document doesn't exist: Output error JSON in work tag: `<work filename="error.json">{"error": "Document not found", "path": "{path}"}</work>`
 
 **Empty or minimal documents:**
 - Process basic checks (frontmatter, markdown)
@@ -473,21 +486,3 @@ Output exactly this JSON structure as your FINAL message:
 **CRITICAL: Use parallel tool execution for independent operations.**
 Execute multiple independent tool calls in a SINGLE message when no dependencies exist.
 DO NOT execute tools sequentially when they can run in parallel.
-
-## Final Output Reminder
-
-**YOUR FINAL MESSAGE MUST BE PURE JSON ONLY**
-
-DO NOT include:
-- Explanatory text before the JSON
-- Summary messages after the JSON
-- Any text whatsoever except the JSON structure
-
-The SubagentStop hook will:
-1. Extract your final assistant message
-2. Parse it as JSON
-3. Block with Exit Code 2 if parsing fails
-4. Save the JSON to `/tmp/document-reviewer-output/{basename}-{timestamp}.json`
-
-Your responsibility: Output valid JSON matching the schema in Phase 3.
-Hook's responsibility: Persistence and validation.

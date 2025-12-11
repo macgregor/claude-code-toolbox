@@ -118,10 +118,10 @@ def parse_context_tags(text: str) -> List[str]:
 
 
 def parse_work_tags(text: str) -> List[Dict[str, str]]:
-    """Extract {relpath, content} from <work> tags"""
-    pattern = r'<work\s+relpath="([^"]+)"(?:\s+abspath="[^"]+")?\s*>(.*?)</work>'
+    """Extract {filename, content} from <work> tags"""
+    pattern = r'<work\s+filename="([^"]+)"\s*>(.*?)</work>'
     matches = re.findall(pattern, text, re.DOTALL)
-    return [{"relpath": relpath, "content": content.strip()} for relpath, content in matches]
+    return [{"filename": filename, "content": content.strip()} for filename, content in matches]
 
 
 def main():
@@ -386,9 +386,23 @@ def handle_subagent_stop(hook_input):
 
         # Parse and write work files
         work_items = parse_work_tags(final_output)
+        work_dir = request_dir / "work"
+
         for item in work_items:
-            work_path = request_dir / item["relpath"]
-            work_path.parent.mkdir(parents=True, exist_ok=True)
+            filename = item["filename"]
+
+            # Validate: no path separators or traversal
+            if "/" in filename or "\\" in filename or ".." in filename:
+                print(f"[SubagentStop] ERROR: Invalid filename '{filename}' - must be simple filename only", file=sys.stderr)
+                sys.exit(1)
+
+            work_path = work_dir / filename
+
+            # Validate: no duplicates
+            if work_path.exists():
+                print(f"[SubagentStop] ERROR: File '{filename}' already exists in work directory", file=sys.stderr)
+                sys.exit(1)
+
             work_path.write_text(item["content"])
 
         # Log to request's hook-events.jsonl
