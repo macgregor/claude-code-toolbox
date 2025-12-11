@@ -423,7 +423,6 @@ def handle_stop_event(hook_input):
                 sys.exit(0)
 
         # Get end UUID from session log
-        transcript_path = hook_input.get("transcript_path")
         if not transcript_path or not Path(transcript_path).exists():
             sys.exit(0)
 
