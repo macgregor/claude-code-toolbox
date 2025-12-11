@@ -54,7 +54,7 @@ Enable statusline with plugin version, trace ID, and log extraction:
 }
 ```
 
-Example output:
+Example output (synced):
 ```
 ai-assisted-development@claude-code-toolbox: v0.1.0
 📦 Installed: a1b2c3d
@@ -62,7 +62,15 @@ ai-assisted-development@claude-code-toolbox: v0.1.0
 💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
 ```
 
-Shows plugin version, git SHA, current request ID, and request directory path.
+Example output (out of sync):
+```
+ai-assisted-development@claude-code-toolbox: v0.1.0 ⚠️
+📦 Installed: a1b2c3d | Current: f8e6b21
+📁 Request: 2025-12-11T00-15-32_e36738f5
+💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
+```
+
+Shows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
 
 ### Isolated Development
 
