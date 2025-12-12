@@ -41,6 +41,108 @@ class TestStateFile(unittest.TestCase):
         self.assertFalse(sf._dirty)
         self.assertEqual(json.loads(self.state_path.read_text()), {"key": "value"})
 
+    def test_nested_dict_modification_marks_dirty(self):
+        """Nested dict modifications should automatically mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["agent_types"] = {}
+        sf.save()
+        self.assertFalse(sf._dirty)
+
+        sf["agent_types"]["agent-123"] = "explore"
+        self.assertTrue(sf._dirty)
+
+    def test_deep_nested_dict_modification_marks_dirty(self):
+        """Deep nested dict modifications should mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["config"] = {"nested": {}}
+        sf.save()
+        self.assertFalse(sf._dirty)
+
+        sf["config"]["nested"]["deep"] = "value"
+        self.assertTrue(sf._dirty)
+
+    def test_nested_dict_persists_correctly(self):
+        """Nested dict modifications should persist to JSON."""
+        sf = StateFile(self.state_path)
+        sf["agent_types"] = {}
+        sf["agent_types"]["agent-123"] = "explore"
+        sf["agent_types"]["agent-456"] = "plan"
+        sf.save()
+
+        loaded = json.loads(self.state_path.read_text())
+        self.assertEqual(loaded["agent_types"]["agent-123"], "explore")
+        self.assertEqual(loaded["agent_types"]["agent-456"], "plan")
+
+    def test_nested_dict_reloads_correctly(self):
+        """Nested dicts should reload from JSON and remain tracked."""
+        sf = StateFile(self.state_path)
+        sf["agent_types"] = {"agent-123": "explore"}
+        sf.save()
+
+        sf2 = StateFile(self.state_path)
+        self.assertFalse(sf2._dirty)
+        sf2["agent_types"]["agent-456"] = "plan"
+        self.assertTrue(sf2._dirty)
+
+    def test_dict_update_marks_dirty(self):
+        """update() method should mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {}
+        sf.save()
+
+        sf["data"].update({"key": "value"})
+        self.assertTrue(sf._dirty)
+
+    def test_dict_pop_marks_dirty(self):
+        """pop() method should mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {"key": "value"}
+        sf.save()
+
+        sf["data"].pop("key")
+        self.assertTrue(sf._dirty)
+
+    def test_dict_popitem_marks_dirty(self):
+        """popitem() method should mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {"key": "value"}
+        sf.save()
+
+        sf["data"].popitem()
+        self.assertTrue(sf._dirty)
+
+    def test_dict_clear_marks_dirty(self):
+        """clear() method should mark StateFile as dirty."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {"key": "value"}
+        sf.save()
+
+        sf["data"].clear()
+        self.assertTrue(sf._dirty)
+
+    def test_dict_setdefault_marks_dirty(self):
+        """setdefault() should mark dirty when key doesn't exist."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {}
+        sf.save()
+
+        nested = sf["data"].setdefault("key", {})
+        self.assertTrue(sf._dirty)
+        sf.save()
+
+        nested["value"] = "test"
+        self.assertTrue(sf._dirty)
+
+    def test_dict_setdefault_no_dirty_when_exists(self):
+        """setdefault() should not mark dirty when key exists."""
+        sf = StateFile(self.state_path)
+        sf["data"] = {"key": {"existing": "value"}}
+        sf.save()
+
+        result = sf["data"].setdefault("key", {})
+        self.assertFalse(sf._dirty)
+        self.assertEqual(result["existing"], "value")
+
 
 class TestState(unittest.TestCase):
     def setUp(self):

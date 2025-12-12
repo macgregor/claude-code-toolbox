@@ -1,36 +1,100 @@
 """State management for lifecycle tracking."""
 
 import json
+import weakref
 from pathlib import Path
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, Optional, Tuple
+
+
+class _TrackedDict(dict):
+    """Dict that marks parent StateFile as dirty on any modification.
+
+    Note: Only dict nesting is tracked. Dicts inside lists are not tracked
+    and require manual re-assignment.
+    """
+
+    def __init__(self, parent: 'StateFile', *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._parent_ref = weakref.ref(parent)
+        for key, value in list(self.items()):
+            if isinstance(value, dict) and not isinstance(value, _TrackedDict):
+                super().__setitem__(key, _TrackedDict(parent, value))
+
+    def _mark_dirty(self) -> None:
+        """Mark parent StateFile as dirty if parent still exists."""
+        parent = self._parent_ref()
+        if parent is not None:
+            parent._dirty = True
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        parent = self._parent_ref()
+        if parent is None:
+            return
+        if isinstance(value, dict) and not isinstance(value, _TrackedDict):
+            value = _TrackedDict(parent, value)
+        super().__setitem__(key, value)
+        parent._dirty = True
+
+    def __delitem__(self, key: Any) -> None:
+        super().__delitem__(key)
+        self._mark_dirty()
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        super().update(*args, **kwargs)
+        parent = self._parent_ref()
+        if parent is not None:
+            for key, value in list(self.items()):
+                if isinstance(value, dict) and not isinstance(value, _TrackedDict):
+                    super().__setitem__(key, _TrackedDict(parent, value))
+        self._mark_dirty()
+
+    def pop(self, *args: Any) -> Any:
+        result = super().pop(*args)
+        self._mark_dirty()
+        return result
+
+    def popitem(self) -> Tuple[Any, Any]:
+        result = super().popitem()
+        self._mark_dirty()
+        return result
+
+    def setdefault(self, key: Any, default: Any = None) -> Any:
+        if key in self:
+            return self[key]
+        parent = self._parent_ref()
+        if parent is not None:
+            if isinstance(default, dict) and not isinstance(default, _TrackedDict):
+                default = _TrackedDict(parent, default)
+            parent._dirty = True
+        super().__setitem__(key, default)
+        return default
+
+    def clear(self) -> None:
+        super().clear()
+        self._mark_dirty()
 
 
 class StateFile(dict):
-    """File-backed dict with auto-population on cache miss.
+    """File-backed dict with automatic nested change tracking."""
 
-    WARNING: Nested dict modifications don't trigger dirty flag.
-    Example problematic pattern:
-        state["agent_types"][agent_id] = type  # Won't mark dirty!
-
-    Workaround: Re-assign the entire dict:
-        agent_types = state["agent_types"]
-        agent_types[agent_id] = type
-        state["agent_types"] = agent_types  # Triggers dirty flag
-    """
-
-    def __init__(self, path: Path):
+    def __init__(self, path: Path) -> None:
         super().__init__()
-        self.path = path
-        self._dirty = False
-        self._loaders = {}
+        self.path: Path = path
+        self._dirty: bool = False
+        self._loaders: Dict[str, Callable[[], Any]] = {}
         if path.exists():
-            self.update(json.loads(path.read_text()))
+            data = json.loads(path.read_text())
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    super().__setitem__(key, _TrackedDict(self, value))
+                else:
+                    super().__setitem__(key, value)
 
-    def register_loader(self, key: str, loader: Callable[[], Any]):
+    def register_loader(self, key: str, loader: Callable[[], Any]) -> None:
         """Register a function to populate key on cache miss."""
         self._loaders[key] = loader
 
-    def __missing__(self, key: str):
+    def __missing__(self, key: str) -> Optional[Any]:
         """Auto-populate from registered loader on cache miss."""
         if key in self._loaders:
             value = self._loaders[key]()
@@ -39,18 +103,38 @@ class StateFile(dict):
                 return value
         return None
 
-    def __setitem__(self, key, value):
+    def __getitem__(self, key: Any) -> Any:
+        value = super().__getitem__(key)
+        if isinstance(value, dict) and not isinstance(value, _TrackedDict):
+            value = _TrackedDict(self, value)
+            super().__setitem__(key, value)
+        return value
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        if isinstance(value, dict) and not isinstance(value, _TrackedDict):
+            value = _TrackedDict(self, value)
         super().__setitem__(key, value)
         self._dirty = True
 
-    def save(self):
+    def save(self) -> None:
         """Atomic write if dirty."""
         if self._dirty:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temp = self.path.with_suffix('.tmp')
-            temp.write_text(json.dumps(dict(self), indent=2))
+            data = self._unwrap_for_json(dict(self))
+            temp.write_text(json.dumps(data, indent=2))
             temp.rename(self.path)
             self._dirty = False
+
+    def _unwrap_for_json(self, obj: Any) -> Any:
+        """Recursively unwrap _TrackedDict to plain dict for JSON serialization."""
+        if isinstance(obj, _TrackedDict):
+            return {k: self._unwrap_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, dict):
+            return {k: self._unwrap_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._unwrap_for_json(item) for item in obj]
+        return obj
 
 
 class State:
@@ -60,12 +144,6 @@ class State:
         toolbox_root: Project root directory (from get_toolbox_root(hook_input))
         session_id: Session ID (from hook_input['session_id'])
         transcript_path: Path to session log (from hook_input['transcript_path'])
-
-    WARNING: agent_types is a nested dict that requires special handling.
-    Nested modifications DON'T trigger dirty flag. To modify agent_types:
-        agent_types = state["agent_types"]
-        agent_types[agent_id] = type
-        state["agent_types"] = agent_types  # Re-assign to trigger save
     """
 
     def __init__(self, toolbox_root: str, session_id: str, transcript_path: str = None):
@@ -111,9 +189,9 @@ class State:
 
     def set_request_id(self, request_id: str):
         """Set request_id for current session."""
-        session_requests = self._global.get("session_requests", {})
-        session_requests[self.session_id] = request_id
-        self._global["session_requests"] = session_requests  # Trigger dirty flag
+        if "session_requests" not in self._global:
+            self._global["session_requests"] = {}
+        self._global["session_requests"][self.session_id] = request_id
 
     def __setitem__(self, key, value):
         """Dict-like write routing to correct file."""
