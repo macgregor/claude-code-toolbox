@@ -82,7 +82,7 @@ Tests use Python unittest. See `ai-assisted-development/tests/` for test files.
 
 ### Debug Status Line
 
-Enable statusline hook that sows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
+Enable statusline hook that shows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
 
 ```json
 // .claude/settings.json or .claude/settings.local.json
