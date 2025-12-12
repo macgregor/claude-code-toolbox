@@ -15,6 +15,23 @@ from .handlers import EventHandler
 class LifecycleOrchestrator:
     """Coordinates hook processing, manages lifecycle, executes side effects."""
 
+    def __init__(self):
+        self._global_state_file = ".global-state.json"
+        self._request_state_file = ".state.json"
+
+    def _load_json(self, path: Path) -> dict:
+        """Load JSON from file, return empty dict if not exists."""
+        if path.exists():
+            return json.loads(path.read_text())
+        return {}
+
+    def _save_json(self, path: Path, data: dict) -> None:
+        """Save JSON to file with atomic write (temp + rename)."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp = path.with_suffix('.tmp')
+        temp.write_text(json.dumps(data, indent=2))
+        temp.rename(path)
+
     def process(self, raw_hook_input: Dict[str, Any]):
         """Process hook event.
 
