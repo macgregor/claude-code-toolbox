@@ -61,31 +61,23 @@ class LifecycleOrchestrator:
         Args:
             raw_hook_input: Raw hook input JSON from Claude Code
         """
-        # 1. Parse and validate
         event_data = self._build_event_data(raw_hook_input)
 
-        # 2. Determine request context
         toolbox_root = get_toolbox_root(raw_hook_input)
         if not toolbox_root:
             return
 
-        # Handle SessionStart specially - just create events dir
         if event_data.hook_event_name == "SessionStart":
             events_dir = Path(toolbox_root) / ".toolbox" / "events"
             events_dir.mkdir(parents=True, exist_ok=True)
             return
 
-        # For other events, need request_id
+        # Generate request_id (UserPromptSubmit) or load from global state (other events)
         request_id = self._get_or_create_request_id(event_data, toolbox_root)
         if not request_id:
             return
-        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
 
-        # 3. Create request directory if needed
-        if not request_dir.exists():
-            self._create_request_directory(request_dir, toolbox_root, request_id)
-
-        # Register request_id for UserPromptSubmit
+        # Persist newly generated request_id to global state
         session_id = event_data.fields.get("session_id")
         if event_data.hook_event_name == "UserPromptSubmit":
             global_state = self._load_global_state(toolbox_root)
@@ -94,10 +86,13 @@ class LifecycleOrchestrator:
             global_state["session_requests"][session_id] = request_id
             self._save_global_state(toolbox_root, global_state)
 
-        # Build context from state files
+        request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
+
+        if not request_dir.exists():
+            self._create_request_directory(request_dir, toolbox_root, request_id)
+
         context = self._build_request_context(event_data, request_dir, request_id)
 
-        # Execute framework logic specific to this event
         if event_data.hook_event_name == "UserPromptSubmit":
             self._handle_user_prompt_submit(context, event_data)
         elif event_data.hook_event_name == "SubagentStart":
@@ -107,13 +102,8 @@ class LifecycleOrchestrator:
         elif event_data.hook_event_name == "Stop":
             self._handle_stop(context, event_data)
 
-        # Persist state changes
         self._persist_state_changes(toolbox_root, request_dir, context)
-
-        # Execute side effects
         self._execute_file_operations(context)
-
-        # Log hook event
         self._append_hook_event(request_dir, raw_hook_input)
 
     def _build_event_data(self, raw_hook_input: Dict[str, Any]) -> EventData:
@@ -129,7 +119,6 @@ class LifecycleOrchestrator:
         if event_data.hook_event_name == "UserPromptSubmit":
             return generate_request_id(event_data.fields)
 
-        # Lookup from global state
         session_id = event_data.fields.get("session_id")
         global_state = self._load_global_state(toolbox_root)
         return global_state.get("session_requests", {}).get(session_id, "")
@@ -171,7 +160,6 @@ class LifecycleOrchestrator:
         agent_type = event_data.fields.get("agent_type", "unknown")
 
         if agent_id and agent_type != "unknown":
-            # Modify agent_types dict (will be persisted)
             context.agent_types[agent_id] = agent_type
 
     def _handle_subagent_stop(self, context: RequestContext, event_data: EventData):
@@ -182,11 +170,9 @@ class LifecycleOrchestrator:
         if not agent_transcript_path or not Path(agent_transcript_path).exists():
             return
 
-        # Copy agent transcript
         transcript_copy = context.request_dir / "session-logs" / f"agent-{agent_id}.jsonl"
         shutil.copy2(agent_transcript_path, transcript_copy)
 
-        # Extract final agent output
         with open(agent_transcript_path, 'r') as f:
             lines = f.readlines()
 
@@ -200,7 +186,6 @@ class LifecycleOrchestrator:
                         final_output += block.get("text", "")
                 break
 
-        # Parse and append context tags
         contexts = parse_context_tags(final_output)
         if contexts:
             agent_type = context.agent_types.get(agent_id, "unknown")
@@ -211,20 +196,17 @@ class LifecycleOrchestrator:
                     f.write(ctx + '\n')
                 f.write(f'</agent-{agent_id}>\n')
 
-        # Parse and write work files
         work_items = parse_work_tags(final_output)
         work_dir = context.request_dir / "work"
 
         for item in work_items:
             filename = item["filename"]
 
-            # Validate: no path separators or traversal
             if "/" in filename or "\\" in filename or ".." in filename:
                 raise NonBlockingError(f"Invalid filename '{filename}' - must be simple filename only")
 
             work_path = work_dir / filename
 
-            # Validate: no duplicates
             if work_path.exists():
                 raise NonBlockingError(f"File '{filename}' already exists in work directory")
 
@@ -242,7 +224,6 @@ class LifecycleOrchestrator:
 
         messages = [json.loads(line) for line in lines]
 
-        # Find start and end indices
         start_idx = None
         end_idx = None
         for idx, msg in enumerate(messages):
@@ -251,7 +232,6 @@ class LifecycleOrchestrator:
             if msg == messages[-1]:
                 end_idx = idx
 
-        # Prune and save
         if start_idx is not None and end_idx is not None:
             pruned_messages = messages[start_idx:end_idx + 1]
             pruned_log_path = context.request_dir / "session-logs" / f"{context.session_id}-pruned.jsonl"
@@ -264,7 +244,6 @@ class LifecycleOrchestrator:
         """Write state changes to .state.json file."""
         request_state = self._load_request_state(request_dir)
 
-        # Extract start_uuid from session log if not already set
         if context.transcript_path.exists() and not request_state.get("start_uuid"):
             with open(context.transcript_path, 'r') as f:
                 lines = f.readlines()
@@ -274,16 +253,13 @@ class LifecycleOrchestrator:
                     if start_uuid:
                         request_state["start_uuid"] = start_uuid
 
-        # Persist agent_types changes (SubagentStart)
         if context.agent_types:
             request_state["agent_types"] = context.agent_types
 
         self._save_request_state(request_dir, request_state)
 
     def _execute_file_operations(self, context: RequestContext):
-        """Execute FileOperations queued by handlers (currently none - extension point)."""
-        # Future: Execute context.file_operations
-        # For now, no handlers registered, so nothing to execute
+        """Execute FileOperations queued by handlers (extension point - not yet implemented)."""
         pass
 
     def _append_hook_event(self, request_dir: Path, raw_hook_input: Dict[str, Any]):
