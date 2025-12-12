@@ -1,0 +1,229 @@
+"""Tests for StatusLine event handler."""
+
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from lifecycle.handlers.statusline import PluginMetadata, StatusLineHandler
+from lifecycle.models import RequestContext, EventData
+from lifecycle.errors import NonBlockingError
+
+
+class TestPluginMetadata(unittest.TestCase):
+    """Test PluginMetadata class."""
+
+    def setUp(self):
+        """Create temporary home directory for test files."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.home_path = Path(self.temp_dir)
+        self.claude_plugins = self.home_path / ".claude" / "plugins"
+        self.claude_plugins.mkdir(parents=True)
+
+    def tearDown(self):
+        """Clean up temp directory."""
+        import shutil
+        shutil.rmtree(self.temp_dir)
+
+    def test_reads_installed_plugins_json(self):
+        """Should read version, gitCommitSha, installPath from installed_plugins.json."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123def456",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+
+        with patch("pathlib.Path.home", return_value=self.home_path):
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        self.assertEqual(metadata.version, "1.0.0")
+        self.assertEqual(metadata.installed_sha, "abc123def456")
+        self.assertEqual(metadata.install_path, "/path/to/plugin")
+
+    def test_graceful_fallback_when_plugin_not_found(self):
+        """Should use 'unknown' defaults when plugin not in installed_plugins.json."""
+        installed_plugins = {"version": 1, "plugins": {}}
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+
+        with patch("pathlib.Path.home", return_value=self.home_path):
+            metadata = PluginMetadata("nonexistent@marketplace", "marketplace")
+
+        self.assertEqual(metadata.version, "unknown")
+        self.assertEqual(metadata.installed_sha, "unknown")
+        self.assertEqual(metadata.install_path, "")
+
+    def test_detects_dev_mode_from_known_marketplaces(self):
+        """Should detect dev mode when source.source == 'directory'."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        known_marketplaces = {
+            "test-marketplace": {
+                "source": {
+                    "source": "directory",
+                    "path": "/path/to/marketplace"
+                },
+                "installLocation": "/path/to/marketplace"
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        (self.claude_plugins / "known_marketplaces.json").write_text(json.dumps(known_marketplaces))
+
+        with patch("pathlib.Path.home", return_value=self.home_path):
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        self.assertTrue(metadata.is_dev_mode)
+
+    def test_not_dev_mode_when_source_is_github(self):
+        """Should not be dev mode when source is github."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        known_marketplaces = {
+            "test-marketplace": {
+                "source": {
+                    "source": "github",
+                    "repo": "owner/repo"
+                },
+                "installLocation": "/path/to/marketplace"
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        (self.claude_plugins / "known_marketplaces.json").write_text(json.dumps(known_marketplaces))
+
+        with patch("pathlib.Path.home", return_value=self.home_path):
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        self.assertFalse(metadata.is_dev_mode)
+
+    def test_runs_git_in_dev_mode(self):
+        """Should run git rev-parse HEAD in dev mode."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        known_marketplaces = {
+            "test-marketplace": {
+                "source": {"source": "directory"},
+                "installLocation": "/path/to/marketplace"
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        (self.claude_plugins / "known_marketplaces.json").write_text(json.dumps(known_marketplaces))
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "def456789\n"
+
+        with patch("pathlib.Path.home", return_value=self.home_path), \
+             patch("subprocess.run", return_value=mock_result) as mock_run:
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        # Verify git was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[0], "git")
+        self.assertEqual(args[1], "-C")
+        self.assertEqual(args[3], "rev-parse")
+        self.assertEqual(args[4], "HEAD")
+
+        self.assertEqual(metadata.current_sha, "def456789")
+
+    def test_sets_needs_warning_when_shas_differ(self):
+        """Should set needs_warning=True when installed_sha != current_sha."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        known_marketplaces = {
+            "test-marketplace": {
+                "source": {"source": "directory"},
+                "installLocation": "/path/to/marketplace"
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        (self.claude_plugins / "known_marketplaces.json").write_text(json.dumps(known_marketplaces))
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "different_sha\n"
+
+        with patch("pathlib.Path.home", return_value=self.home_path), \
+             patch("subprocess.run", return_value=mock_result):
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        self.assertTrue(metadata.needs_warning)
+
+    def test_does_not_run_git_when_not_dev_mode(self):
+        """Should not run git when not in dev mode."""
+        installed_plugins = {
+            "version": 1,
+            "plugins": {
+                "test-plugin@test-marketplace": {
+                    "version": "1.0.0",
+                    "gitCommitSha": "abc123",
+                    "installPath": "/path/to/plugin"
+                }
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        # No known_marketplaces.json - not dev mode
+
+        with patch("pathlib.Path.home", return_value=self.home_path), \
+             patch("subprocess.run") as mock_run:
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        mock_run.assert_not_called()
+        self.assertFalse(metadata.is_dev_mode)
+        self.assertEqual(metadata.current_sha, "")
+
+
+if __name__ == "__main__":
+    unittest.main()
