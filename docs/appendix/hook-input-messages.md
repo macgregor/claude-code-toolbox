@@ -247,6 +247,43 @@ Fired when Claude Code generates a notification.
 
 ---
 
+### Statusline
+
+Write to stdout and itll appear in Claude Code terminal. This is not technically a hook, but it is very similar. Its not available to plugin hooks, only via the "statusline" hook in project/user settings.json. 
+
+```
+{
+  "session_id": "2b24a55f-dd88-425d-9781-c387227b1adf",
+  "transcript_path": "/home/claude-user/.claude/projects/-workspace/2b24a55f-dd88-425d-9781-c387227b1adf.jsonl",
+  "cwd": "/workspace",
+  "model": {
+    "id": "claude-sonnet-4-5@20250929",
+    "display_name": "Sonnet 4.5"
+  },
+  "workspace": {
+    "current_dir": "/workspace",
+    "project_dir": "/workspace"
+  },
+  "version": "2.0.58",
+  "output_style": {
+    "name": "default"
+  },
+  "cost": {
+    "total_cost_usd": 0,
+    "total_duration_ms": 701,
+    "total_api_duration_ms": 0,
+    "total_lines_added": 0,
+    "total_lines_removed": 0
+  },
+  "exceeds_200k_tokens": false
+}
+```
+**User Cases**:
+- updating Claude Code terminal status line with customized information
+- **NOT** available in plugin hook system, only user settings.json
+
+---
+
 ## Hook Configuration
 
 Hooks are configured in `hooks.json` with matchers for specific events:
