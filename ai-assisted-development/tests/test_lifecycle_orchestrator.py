@@ -214,6 +214,25 @@ class TestLifecycleOrchestrator(unittest.TestCase):
 
         self.assertEqual(event_data.hook_event_name, "StatusLine")
 
+    def test_get_handler_returns_statusline_for_statusline_event(self):
+        """_get_handler should return StatusLineHandler for StatusLine events."""
+        orchestrator = LifecycleOrchestrator()
+
+        handler = orchestrator._get_handler("StatusLine")
+
+        # Will fail because StatusLineHandler doesn't exist yet
+        # For now, just verify it attempts to import
+        self.assertIsNotNone(handler)
+        self.assertEqual(handler.__class__.__name__, "StatusLineHandler")
+
+    def test_get_handler_returns_none_for_other_events(self):
+        """_get_handler should return None for events without handlers."""
+        orchestrator = LifecycleOrchestrator()
+
+        self.assertIsNone(orchestrator._get_handler("SessionStart"))
+        self.assertIsNone(orchestrator._get_handler("UserPromptSubmit"))
+        self.assertIsNone(orchestrator._get_handler("UnknownEvent"))
+
     def _create_test_request(self):
         """Helper to create a test request."""
         hook_input = {

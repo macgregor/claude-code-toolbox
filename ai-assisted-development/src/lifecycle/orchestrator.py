@@ -147,7 +147,10 @@ class LifecycleOrchestrator:
         create_request_directory(toolbox_root, request_id)
 
     def _get_handler(self, event_name: str) -> Optional[EventHandler]:
-        """Route event to handler (returns None - extension point)."""
+        """Route event to handler."""
+        if event_name == "StatusLine":
+            from .handlers.statusline import StatusLineHandler
+            return StatusLineHandler()
         return None
 
     def _build_request_context(self, event_data: EventData, request_dir: Path, request_id: str) -> RequestContext:
