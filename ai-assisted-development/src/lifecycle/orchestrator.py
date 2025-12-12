@@ -78,7 +78,7 @@ class LifecycleOrchestrator:
             return
 
         # Persist newly generated request_id to global state
-        session_id = event_data.fields.get("session_id")
+        session_id = event_data.raw_hook_input.get("session_id")
         if event_data.hook_event_name == "UserPromptSubmit":
             global_state = self._load_global_state(toolbox_root)
             if "session_requests" not in global_state:
@@ -110,16 +110,15 @@ class LifecycleOrchestrator:
         """Extract/validate fields, create EventData."""
         return EventData(
             hook_event_name=raw_hook_input.get("hook_event_name", ""),
-            raw_hook_input=json.dumps(raw_hook_input),
-            fields=raw_hook_input
+            raw_hook_input=raw_hook_input  # No JSON serialization
         )
 
     def _get_or_create_request_id(self, event_data: EventData, toolbox_root: str) -> str:
         """UserPromptSubmit creates, others lookup from state."""
         if event_data.hook_event_name == "UserPromptSubmit":
-            return generate_request_id(event_data.fields)
+            return generate_request_id(event_data.raw_hook_input)
 
-        session_id = event_data.fields.get("session_id")
+        session_id = event_data.raw_hook_input.get("session_id")
         global_state = self._load_global_state(toolbox_root)
         return global_state.get("session_requests", {}).get(session_id, "")
 
@@ -135,17 +134,17 @@ class LifecycleOrchestrator:
         """Load state data into RequestContext."""
         request_state = self._load_request_state(request_dir)
         return RequestContext(
-            session_id=event_data.fields.get("session_id", ""),
+            session_id=event_data.raw_hook_input.get("session_id", ""),
             request_id=request_id,
             request_dir=request_dir,
-            transcript_path=Path(event_data.fields.get("transcript_path", "")),
+            transcript_path=Path(event_data.raw_hook_input.get("transcript_path", "")),
             agent_types=request_state.get("agent_types", {}),
             start_uuid=request_state.get("start_uuid")
         )
 
     def _handle_user_prompt_submit(self, context: RequestContext, event_data: EventData):
         """Write user prompt to context.md."""
-        prompt = event_data.fields.get("prompt", "")
+        prompt = event_data.raw_hook_input.get("prompt", "")
         context_file = context.request_dir / "context.md"
         context_file.write_text(f"""<userPrompt>
 {prompt}
@@ -156,16 +155,16 @@ class LifecycleOrchestrator:
 
     def _handle_subagent_start(self, context: RequestContext, event_data: EventData):
         """Update context.agent_types mapping (state change)."""
-        agent_id = event_data.fields.get("agent_id")
-        agent_type = event_data.fields.get("agent_type", "unknown")
+        agent_id = event_data.raw_hook_input.get("agent_id")
+        agent_type = event_data.raw_hook_input.get("agent_type", "unknown")
 
         if agent_id and agent_type != "unknown":
             context.agent_types[agent_id] = agent_type
 
     def _handle_subagent_stop(self, context: RequestContext, event_data: EventData):
         """Extract agent context/work tags, append to context.md, copy transcript."""
-        agent_id = event_data.fields.get("agent_id", "unknown")
-        agent_transcript_path = event_data.fields.get("agent_transcript_path")
+        agent_id = event_data.raw_hook_input.get("agent_id", "unknown")
+        agent_transcript_path = event_data.raw_hook_input.get("agent_transcript_path")
 
         if not agent_transcript_path or not Path(agent_transcript_path).exists():
             return
@@ -214,7 +213,7 @@ class LifecycleOrchestrator:
 
     def _handle_stop(self, context: RequestContext, event_data: EventData):
         """Extract request-specific portion from full session log."""
-        transcript_path = event_data.fields.get("transcript_path")
+        transcript_path = event_data.raw_hook_input.get("transcript_path")
 
         if not transcript_path or not Path(transcript_path).exists():
             return

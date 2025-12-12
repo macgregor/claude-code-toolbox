@@ -156,6 +156,21 @@ class TestLifecycleOrchestrator(unittest.TestCase):
         transcript_copy = request_dir / "session-logs" / "agent-agent-456.jsonl"
         self.assertTrue(transcript_copy.exists())
 
+    def test_event_data_stores_dict_not_json_string(self):
+        """EventData should store raw_hook_input as dict."""
+        hook_input = {
+            "hook_event_name": "SessionStart",
+            "session_id": "test-session",
+            "transcript_path": "/path/to/transcript.jsonl",
+            "cwd": "/workspace"
+        }
+
+        event_data = self.orchestrator._build_event_data(hook_input)
+
+        # Should be dict, not JSON string
+        self.assertIsInstance(event_data.raw_hook_input, dict)
+        self.assertEqual(event_data.raw_hook_input["session_id"], "test-session")
+
     def _create_test_request(self):
         """Helper to create a test request."""
         hook_input = {

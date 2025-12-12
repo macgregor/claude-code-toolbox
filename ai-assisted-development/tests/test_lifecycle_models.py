@@ -44,8 +44,7 @@ class TestEventData(unittest.TestCase):
         """EventData should be frozen dataclass."""
         event = EventData(
             hook_event_name="UserPromptSubmit",
-            raw_hook_input='{"test": "data"}',
-            fields={"session_id": "sess-123"}
+            raw_hook_input={"test": "data", "session_id": "sess-123"}
         )
         self.assertEqual(event.hook_event_name, "UserPromptSubmit")
 
@@ -56,11 +55,10 @@ class TestEventData(unittest.TestCase):
         """EventData should store all fields in dict."""
         event = EventData(
             hook_event_name="Stop",
-            raw_hook_input="{}",
-            fields={"session_id": "s", "transcript_path": "/tmp/t"}
+            raw_hook_input={"session_id": "s", "transcript_path": "/tmp/t"}
         )
-        self.assertEqual(event.fields["session_id"], "s")
-        self.assertEqual(event.fields["transcript_path"], "/tmp/t")
+        self.assertEqual(event.raw_hook_input["session_id"], "s")
+        self.assertEqual(event.raw_hook_input["transcript_path"], "/tmp/t")
 
 
 class TestFileOperation(unittest.TestCase):

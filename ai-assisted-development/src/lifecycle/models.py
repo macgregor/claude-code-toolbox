@@ -33,11 +33,10 @@ class EventData:
 
     Transforms anthropic's hook input JSON into validated data.
     Common fields: session_id, transcript_path, cwd, hook_event_name.
-    Event-specific fields available via .fields dict.
+    Event-specific fields available via .raw_hook_input dict.
     """
     hook_event_name: str
-    raw_hook_input: str  # Original JSON for debugging
-    fields: Dict[str, Any]  # All normalized/validated fields
+    raw_hook_input: Dict[str, Any]  # Changed from str, removed fields
 
 
 @dataclass(frozen=True)

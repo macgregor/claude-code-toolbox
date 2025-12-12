@@ -39,8 +39,7 @@ class TestEventHandler(unittest.TestCase):
         )
         event = EventData(
             hook_event_name="Test",
-            raw_hook_input="{}",
-            fields={}
+            raw_hook_input={}
         )
         result = handler.handle(ctx, event)
         self.assertEqual(result, ctx)
