@@ -329,5 +329,64 @@ class TestStatusLineFormatter(unittest.TestCase):
         self.assertNotIn("💾", output)  # No path line
 
 
+class TestStatusLineHandler(unittest.TestCase):
+    """Test StatusLineHandler class."""
+
+    def test_handler_prints_formatted_output(self):
+        """Handler should create metadata, format, and print output."""
+        context = RequestContext(
+            session_id="test-session",
+            request_id="test-request",
+            request_dir=Path("/workspace/.toolbox/events/test-request"),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        event_data = EventData(
+            hook_event_name="StatusLine",
+            raw_hook_input={"session_id": "test", "cwd": "/workspace", "transcript_path": "/path"}
+        )
+
+        handler = StatusLineHandler()
+
+        with patch("builtins.print") as mock_print, \
+             patch.object(PluginMetadata, "_load"):  # Skip actual file reads
+            result = handler.handle(context, event_data)
+
+        # Should print something
+        mock_print.assert_called_once()
+        output = mock_print.call_args[0][0]
+        self.assertIsInstance(output, str)
+
+        # Should return unchanged context
+        self.assertEqual(result, context)
+
+    def test_handler_raises_nonblocking_error_on_failure(self):
+        """Handler should raise NonBlockingError if metadata or formatter fails."""
+        context = RequestContext(
+            session_id="test-session",
+            request_id="test-request",
+            request_dir=Path("/workspace/.toolbox/events/test-request"),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        event_data = EventData(
+            hook_event_name="StatusLine",
+            raw_hook_input={"session_id": "test", "cwd": "/workspace", "transcript_path": "/path"}
+        )
+
+        handler = StatusLineHandler()
+
+        # Make PluginMetadata raise an exception
+        with patch.object(PluginMetadata, "_load", side_effect=Exception("Test error")):
+            with self.assertRaises(NonBlockingError) as cm:
+                handler.handle(context, event_data)
+
+            self.assertIn("StatusLine failed", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

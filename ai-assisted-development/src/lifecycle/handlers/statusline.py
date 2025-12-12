@@ -124,7 +124,23 @@ class StatusLineHandler(EventHandler):
     MARKETPLACE_ID = "claude-code-toolbox"
 
     def handle(self, context: RequestContext, event_data: EventData) -> RequestContext:
-        """Build and print statusline (stub implementation)."""
-        # Stub - will implement later
-        print("StatusLine stub")
-        return context
+        """Build and print statusline.
+
+        Args:
+            context: Request context from orchestrator
+            event_data: Hook input data
+
+        Returns:
+            Unchanged context
+
+        Raises:
+            NonBlockingError: On any failure (logged to stderr, exits 1)
+        """
+        try:
+            metadata = PluginMetadata(self.PLUGIN_ID, self.MARKETPLACE_ID)
+            formatter = StatusLineFormatter()
+            output = formatter.format(metadata, context)
+            print(output)
+            return context
+        except Exception as e:
+            raise NonBlockingError(f"StatusLine failed: {e}")
