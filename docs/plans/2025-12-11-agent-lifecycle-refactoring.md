@@ -28,56 +28,76 @@ Need to establish cleaner patterns to support future extensions (e.g., agent-spe
 
 ---
 
+## Solution Summary
+
+Extract 627-line `agent-lifecycle.py` into focused modules:
+- Hook interface layer (maps stdin/exit codes)
+- Orchestrator (coordinates event processing)
+- State management (dual-file storage)
+- Processing utilities (parse tags, transform data)
+- Handler extension point (empty - for future business logic)
+
+All existing logic moves to orchestrator framework methods. No business logic handlers exist yet.
+
+---
+
 ## Design Principles
 
 1. **YAGNI** - Don't over-engineer or future-proof excessively
-2. **Pure handlers** - Handlers should have no side effects (testable)
-3. **Clear separation** - Hook protocol vs orchestration vs domain logic
-4. **Forward-looking** - Easy to extend with routing logic later, but don't implement it yet
-5. **Simple first** - Start with single files, split only when needed
+2. **Clear separation** - Hook protocol vs orchestrator framework logic vs processing utilities vs extension points
+3. **Event-specific framework methods** - Orchestrator has specific methods for specific events, not generic mega-functions
+4. **Simple first** - Start with single files, split only when needed
+5. **Best-effort execution** - Lifecycle tracking is observational and should never block user workflow
+6. **Extension points** - Handler infrastructure exists for future business logic, but currently unused
 
 ---
 
 ## Core Patterns
 
-### 1. Event Handler Pattern
+### 1. Event Handler Pattern (Extension Point)
+
+Extension point for future business logic. Currently unused.
 
 **Interface**:
 ```python
 class EventHandler(ABC):
     @abstractmethod
     def handle(self, context: RequestContext, event: EventData) -> RequestContext:
-        """Process event and return modified context."""
+        """Process event with business logic."""
         pass
 ```
 
-**Characteristics**:
-- Handlers are pure - no direct side effects
-- Receive clean, normalized inputs
+**When implemented**:
+- Pure functions (no side effects)
+- Receive normalized inputs
 - Return modified context with declared operations
-- Can raise `BlockingError` (exit 2) or `NonBlockingError` (exit 1)
+- Raise `BlockingError` (exit 2) or `NonBlockingError` (exit 1)
+
+**Current state**: ABC defined, no implementations, `_get_handler()` returns None.
 
 ### 2. State Management
 
-**Existing Pattern** (already implemented):
-- `State` class provides unified interface to dual-file storage
-- `StateFile` handles file-backed dict with dirty tracking
-- State lifecycle managed via context manager
+Existing pattern moves to `lifecycle/state.py`:
+- `State` - unified interface to dual-file storage
+- `StateFile` - file-backed dict with dirty tracking
+- Context manager handles lifecycle
 
-**Enhancement**:
-- Extract to `lifecycle/state.py` module
-- `RequestContext` wraps state data for handler access
-- Orchestrator manages State lifecycle and persistence
+Orchestrator manages State lifecycle and persistence. `RequestContext` wraps state data for handler access.
 
 ### 3. Data Processing
 
-**Responsibilities**:
+Centralized in `lifecycle/processing.py`:
 - Transform hook input → `EventData` (normalized, validated)
-- Parse agent outputs (context/work tags)
+- Parse agent outputs (context/work tags from transcripts)
 - Extract/validate fields from hook_input dict
 - Generate request IDs
+- Extract request-scoped session log snapshots
 
-**Centralized** in `lifecycle/processing.py`
+Orchestrator calls processing functions to transform data. Example: `_handle_subagent_stop()` calls `parse_context_tags()` and `parse_work_tags()`.
+
+**Session log snapshots**: Extracts request-specific portion from full session log (start_uuid to stop event). Writes new file to `session-logs/`. Original log untouched. Files accumulate.
+
+**Known issue**: Request boundary detection in interactive sessions may create multiple request directories instead of one. Deferred bug - handles basic case well, needs better understanding of session log structure for edge cases. Not blocking.
 
 ---
 
@@ -108,16 +128,23 @@ def main():
         sys.exit(1)
 ```
 
-**Key Points**:
-- Minimal - just protocol translation
-- Maps Python exceptions → hook exit codes
-- No business logic
+Minimal layer - translates Python exceptions to hook exit codes. No business logic.
 
 ### Layer 2: Orchestrator
 
 **File**: `lifecycle/orchestrator.py`
 
-**Responsibility**: Coordinate hook processing, manage lifecycle, execute side effects
+Coordinates hook processing, manages lifecycle, executes side effects.
+
+**Framework logic** (built-in guarantees):
+- Request directories
+- User prompt capture
+- Agent type tracking
+- Agent output extraction
+- Session log snapshots
+- Hook event logging
+
+**Business logic** (extension point): None registered. Handlers provide extension point for future domain-specific logic.
 
 **Flow**:
 ```python
@@ -134,32 +161,65 @@ class LifecycleOrchestrator:
         request_id = self._get_or_create_request_id(event_data, toolbox_root)
         request_dir = Path(toolbox_root) / ".toolbox/events" / request_id
 
-        # 3. Initialize context with state
+        # 3. Create request directory if needed
+        if not request_dir.exists():
+            self._create_request_directory(request_dir)
+
+        # 4. Initialize context with state
         with State(toolbox_root, event_data.fields["session_id"],
                    event_data.fields.get("transcript_path")) as state:
 
             context = self._build_request_context(event_data, request_dir, state)
 
-            # 4. Route to handler
-            handler = self._get_handler(event_data.hook_event_name)
-            updated_context = handler.handle(context, event_data)
+            # 5. Execute framework logic specific to this event
+            #    IMPORTANT: Framework methods write files to disk IMMEDIATELY
+            #    This ensures files exist before handlers run
+            if event_data.hook_event_name == "UserPromptSubmit":
+                self._handle_user_prompt_submit(context, event_data)
+            elif event_data.hook_event_name == "SubagentStart":
+                self._handle_subagent_start(context, event_data)
+            elif event_data.hook_event_name == "SubagentStop":
+                self._handle_subagent_stop(context, event_data)
+            elif event_data.hook_event_name == "Stop":
+                self._handle_stop(context, event_data)
+            # SessionStart has no framework operations
 
-            # 5. Execute side effects
-            self._execute_file_operations(updated_context)
-            self._persist_state_changes(state, context, updated_context)
+            # 6. Optional business logic handler (currently none registered)
+            #    Handlers can read framework files (already written to disk)
+            #    Handlers return modified context with queued FileOperations
+            handler = self._get_handler(event_data.hook_event_name)
+            if handler:
+                context = handler.handle(context, event_data)
+
+            # 7. Execute side effects (best-effort - failures raise NonBlockingError)
+            #    State changes persisted first, then handler file operations executed
+            self._persist_state_changes(state, context)
+            self._execute_file_operations(context)  # Executes handler-queued operations
             self._append_hook_event(request_dir, raw_hook_input)
 ```
 
 **Key Methods**:
-- `_build_event_data()` - Extract/validate fields, create EventData
-- `_get_or_create_request_id()` - UserPromptSubmit creates, others lookup
-- `_build_request_context()` - Load state data into RequestContext
-- `_get_handler()` - Route event name to handler instance
-- `_execute_file_operations()` - Write/append files from context
-- `_persist_state_changes()` - Compare contexts, update State
 
-**Also contains**:
-- `create_request_directory()` - Directory structure creation (side effect owned by orchestrator)
+*Framework Logic* (specific to each event):
+- `_build_event_data()` - Extract/validate fields, create EventData
+- `_get_or_create_request_id()` - UserPromptSubmit creates, others lookup from state
+- `_create_request_directory()` - Create directory structure on first event
+- `_handle_user_prompt_submit()` - Write user prompt to context.md (direct file write - guaranteed state)
+- `_handle_subagent_start()` - Update context.agent_types mapping (state change)
+- `_handle_subagent_stop()` - Extract agent context/work tags, append to context.md, copy transcript to session_logs/ (direct file writes)
+- `_handle_stop()` - Extract request-specific portion from full session log and write to session_logs/{session_id}-snapshot.jsonl (direct file write)
+- `_persist_state_changes()` - Write State changes to .state.json and .global-state.json files
+- `_execute_file_operations()` - Execute FileOperations queued by handlers (currently none - future extension point)
+- `_append_hook_event()` - Append hook event to hook_events.jsonl (direct file write)
+
+**File operations**:
+- Framework files: Written directly (context.md, session_logs/, hook_events.jsonl, .state.json)
+- Handler files: Declared via FileOperation, executed by `_execute_file_operations()` (unused)
+- Framework writes files before handlers run, after state persists
+
+**Extension points**:
+- `_build_request_context()` - Load state into RequestContext
+- `_get_handler()` - Route to handler (returns None)
 
 ### Layer 3: Domain Objects
 
@@ -206,15 +266,20 @@ class EventData:
 ```python
 @dataclass(frozen=True)
 class FileOperation:
-    """File operation to execute relative to request_dir."""
-    path: str  # Relative path (validated: no traversal, no duplicates)
+    """File operation to execute relative to request_dir.
+
+    Write mode overwrites existing files (last write wins).
+    Orchestrator determines full path based on operation type.
+    """
+    filename: str  # Flat filename only (validated: no path separators)
     content: str
     mode: Literal["write", "append", "copy"]
+    operation_type: Literal["context", "work", "session_log"]
 
     def validate(self):
-        """Raise BlockingError if path is unsafe."""
-        if "/" in self.path or "\\" in self.path or ".." in self.path:
-            raise BlockingError(f"Invalid path: {self.path}")
+        """Raise BlockingError if filename is invalid (resilience, not security)."""
+        if "/" in self.filename or "\\" in self.filename or ".." in self.filename:
+            raise BlockingError(f"Invalid filename: {self.filename}")
 ```
 
 ### Layer 4: Handlers
@@ -222,77 +287,19 @@ class FileOperation:
 **File**: `lifecycle/handlers.py`
 
 **Contains**:
-- `EventHandler` - Abstract base class
-- All handler implementations (SubagentStop, SubagentStart, UserPromptSubmit, Stop, etc.)
-- `PassthroughHandler` - For events that just need logging
+- `EventHandler` - Abstract base class for business logic extension point
+- Handler implementations (currently none)
 
-**Example - SubagentStopHandler**:
-```python
-class SubagentStopHandler(EventHandler):
-    def handle(self, context: RequestContext, event: EventData) -> RequestContext:
-        agent_id = event.fields["agent_id"]
-        transcript_path = Path(event.fields["agent_transcript_path"])
-        agent_type = context.agent_types.get(agent_id, "unknown")
+No handlers registered. `_get_handler()` returns None.
 
-        # Read agent transcript (handler can read directly)
-        if not transcript_path.exists():
-            return context
+All logic lives in orchestrator framework methods:
+- `SessionStart` - Logged only
+- `UserPromptSubmit` - Write prompt to context.md
+- `SubagentStart` - Update agent_types in state
+- `SubagentStop` - Extract context/work tags, copy transcript
+- `Stop` - Extract session log snapshot
 
-        final_output = self._extract_final_output(transcript_path)
-
-        # Parse tags (using processing.py utilities)
-        contexts = parse_context_tags(final_output)
-        work_items = parse_work_tags(final_output)
-
-        # Validate
-        for item in work_items:
-            if "/" in item["filename"] or ".." in item["filename"]:
-                raise BlockingError(f"Invalid filename: {item['filename']}")
-
-        # Check for duplicates by reading existing files
-        existing = list((context.request_dir / "work").glob("*"))
-        for item in work_items:
-            if any(f.name == item["filename"] for f in existing):
-                raise BlockingError(f"Duplicate file: {item['filename']}")
-
-        # Declare operations (no direct writes)
-        if contexts:
-            context_content = f'\n<agent-{agent_id} type="{agent_type}">\n'
-            for ctx in contexts:
-                context_content += ctx + '\n'
-            context_content += f'</agent-{agent_id}>\n'
-
-            context.file_operations.append(
-                FileOperation(path="context.md", content=context_content, mode="append")
-            )
-
-        for item in work_items:
-            context.file_operations.append(
-                FileOperation(
-                    path=f"work/{item['filename']}",
-                    content=item["content"],
-                    mode="write"
-                )
-            )
-
-        # Copy transcript
-        context.file_operations.append(
-            FileOperation(
-                path=f"session-logs/agent-{agent_id}.jsonl",
-                content=transcript_path.read_text(),
-                mode="write"
-            )
-        )
-
-        return context
-```
-
-**Handler Characteristics**:
-- Pure business logic
-- Read from `context.request_dir` as needed
-- Declare writes via `context.file_operations`
-- Raise errors for control flow
-- No direct file I/O for writes
+Handlers provide extension point for future domain-specific logic.
 
 ---
 
@@ -321,6 +328,16 @@ ai-assisted-development/src/
 - If it exceeds ~500 lines, split into `handlers/` directory
 - Other modules should remain focused and small
 
+**Public API** (`lifecycle/__init__.py`):
+```python
+from .orchestrator import LifecycleOrchestrator
+from .errors import BlockingError, NonBlockingError
+
+__all__ = ["LifecycleOrchestrator", "BlockingError", "NonBlockingError"]
+```
+
+Tests can import from submodules directly (e.g., `from lifecycle.handlers import SubagentStopHandler`).
+
 ---
 
 ## Error Handling
@@ -338,85 +355,124 @@ class NonBlockingError(Exception):
 ```
 
 **Flow**:
-1. Handlers/orchestrator raise typed exceptions
-2. Hook interface layer catches and maps to exit codes
-3. Error messages written to stderr
-4. Claude Code receives exit code and acts accordingly
+1. Handlers raise `BlockingError` for validation failures
+2. Orchestrator raises `NonBlockingError` for I/O failures
+3. Hook interface catches and maps to exit codes (2 or 1)
+4. Errors written to stderr
+5. Claude Code receives exit code
+
+**Best-effort semantics**:
+- I/O failures logged, agent continues (exit 1)
+- Validation failures block agent (exit 2)
+- Lifecycle tracking never breaks user workflow
 
 **Benefits**:
-- Pythonic error handling (no manual exit codes in business logic)
-- Clear semantic difference (blocking vs non-blocking)
-- Hook interface owns protocol details
+- Pythonic (no manual exit codes)
+- Clear semantics (blocking vs non-blocking)
+- Hook layer owns protocol
+- Failures don't cascade
 
 ---
 
 ## Benefits
 
-### Testability
-- Handlers are pure functions - easy to unit test
-- No mocking file I/O or State in handler tests
-- Test: given context + event → verify returned operations
+**Testability**:
+- Pure handlers (no mocking file I/O or State)
+- Test: context + event → verify operations
 
-### Extensibility
-- New hook events: add handler, register in orchestrator
-- Agent-specific routing (future): extend `orchestrator._get_handler()`
-- New side effects: extend `FileOperation` modes or add new operation types
+**Extensibility**:
+- New domain logic: add handler, register in `_get_handler()`
+- New framework guarantees: add framework method
+- Agent-specific routing: extend `_get_handler()` logic
+- New file types: extend `operation_type` mapping
 
-### Maintainability
+**Maintainability**:
 - Clear separation of concerns
-- Each module has single responsibility
-- Easy to locate code (hook protocol vs orchestration vs handlers)
-- State management isolated for future evolution
+- Single responsibility per module
+- Easy to locate code
+- State isolated for evolution
 
-### Forward-Looking
-- Routing logic extension point clear (`_get_handler()`)
-- Can add agent-specific handlers later without restructuring
-- Operation pattern extensible (not just files - could add external API calls, etc.)
+**Forward-looking**:
+- Extension points clear
+- Agent-specific handlers later (no restructure)
+- Operation pattern extends beyond files
 
 ---
 
-## Migration Strategy
+## Migration Map
 
-1. **Create module structure**
-   - Create `lifecycle/` directory and empty files
-   - Add `__init__.py` exports
+This refactor reorganizes code without rewriting logic. Here's what moves where:
 
-2. **Extract State** (lowest risk)
-   - Move State/StateFile to `lifecycle/state.py`
-   - Update imports in `agent-lifecycle.py`
-   - Run tests
+### Code That Moves Unchanged
 
-3. **Extract errors and models**
-   - Create `BlockingError`, `NonBlockingError` in `lifecycle/errors.py`
-   - Create domain objects in `lifecycle/models.py`
-   - No behavioral changes yet
+**State classes** (lines 18-190) → `lifecycle/state.py`:
+- `StateFile` class
+- `State` class
 
-4. **Extract processing utilities**
-   - Move parsing functions to `lifecycle/processing.py`
-   - Move `get_toolbox_root`, `generate_request_id` to processing
-   - Update imports
+**Processing functions** → `lifecycle/processing.py`:
+- `get_toolbox_root()` (line 192)
+- `generate_request_id()` (line 224)
+- `create_request_directory()` (line 244)
+- `parse_context_tags()` (line 281)
+- `parse_work_tags()` (line 288)
 
-5. **Create orchestrator skeleton**
-   - Implement `LifecycleOrchestrator.process()` flow
-   - Keep using old handler functions temporarily
-   - Test with one event type (e.g., UserPromptSubmit)
+### Event Handlers Become Methods
 
-6. **Migrate handlers one-by-one**
-   - Start with simplest (PassthroughHandler)
-   - Convert each `handle_*` function to handler class
-   - Update orchestrator routing
-   - Test each handler migration
+Existing functions wrap into `LifecycleOrchestrator` methods. Logic stays identical:
 
-7. **Clean up old code**
-   - Remove old `handle_*` functions from `agent-lifecycle.py`
-   - Simplify `agent-lifecycle.py` to just hook interface
-   - Final test pass
+- `handle_user_prompt_submit()` → `._handle_user_prompt_submit()`
+- `handle_subagent_start()` → `._handle_subagent_start()`
+- `handle_subagent_stop()` → `._handle_subagent_stop()`
+- `handle_stop_event()` → `._handle_stop()`
+- `handle_session_start()` → `._handle_session_start()`
+- Other handlers → `._append_hook_event()` (simplified - they just log events)
+
+### New Code
+
+**Models** (`lifecycle/models.py`):
+- `RequestContext` - wraps state data for handler access
+- `EventData` - normalized hook input
+- `FileOperation` - declarative file operations (unused now, extension point)
+
+**Errors** (`lifecycle/errors.py`):
+- `BlockingError` - validation failures (exit 2)
+- `NonBlockingError` - I/O failures (exit 1)
+
+**Handlers** (`lifecycle/handlers.py`):
+- `EventHandler` ABC - extension point (no implementations)
+
+**Orchestrator** (`lifecycle/orchestrator.py`):
+- `LifecycleOrchestrator` class - wraps existing handler functions
+- `._build_event_data()` - new, extracts fields from hook_input
+- `._get_or_create_request_id()` - new, wraps generate_request_id logic
+- `._build_request_context()` - new, loads state into RequestContext
+- `._get_handler()` - new, returns None (extension point)
+- `._persist_state_changes()` - new, wraps state.save()
+- `._execute_file_operations()` - new, extension point (unused)
+
+### What Changes
+
+**main()** in `agent-lifecycle.py`:
+- Replaces event dispatch with `LifecycleOrchestrator().process()`
+- Adds exception handling for BlockingError/NonBlockingError
+
+**Event routing**:
+- Was: if/elif chain calling functions
+- Now: if/elif chain calling orchestrator methods
+
+Everything else is code movement, not rewriting.
+
+---
+
+## Implementation Notes
+
+No migration path needed. This plugin exists only locally in development. No production users, no backwards compatibility concerns. Implement the design directly.
 
 ---
 
 ## Open Questions
 
-None - design is complete and ready for implementation.
+None.
 
 ---
 
