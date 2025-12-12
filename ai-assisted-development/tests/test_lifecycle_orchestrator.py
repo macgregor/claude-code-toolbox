@@ -79,6 +79,90 @@ class TestLifecycleOrchestrator(unittest.TestCase):
         self.assertIn("test prompt", content)
         self.assertIn("<userPrompt>", content)
 
+    def test_process_handles_subagent_start(self):
+        """process() should handle SubagentStart event."""
+        # First create request with UserPromptSubmit
+        self._create_test_request()
+
+        hook_input = {
+            "hook_event_name": "SubagentStart",
+            "cwd": self.temp_dir,
+            "session_id": "sess-123",
+            "agent_id": "agent-456",
+            "agent_type": "explore",
+            "transcript_path": str(Path(self.temp_dir) / "session.jsonl")
+        }
+
+        self.orchestrator.process(hook_input)
+
+        # Should store agent_type in state
+        events_dir = Path(self.temp_dir) / ".toolbox" / "events"
+        request_dir = [d for d in events_dir.iterdir() if d.is_dir()][0]
+        state_file = request_dir / ".state.json"
+        state_data = json.loads(state_file.read_text())
+        self.assertEqual(state_data["agent_types"]["agent-456"], "explore")
+
+    def test_process_handles_subagent_stop(self):
+        """process() should handle SubagentStop event."""
+        self._create_test_request()
+
+        # Create agent transcript with context/work tags
+        agent_transcript = Path(self.temp_dir) / "agent-456.jsonl"
+        agent_transcript.write_text(json.dumps({
+            "type": "assistant",
+            "message": {
+                "content": [{
+                    "type": "text",
+                    "text": "<context>agent context</context><work filename=\"test.txt\">content</work>"
+                }]
+            }
+        }))
+
+        hook_input = {
+            "hook_event_name": "SubagentStop",
+            "cwd": self.temp_dir,
+            "session_id": "sess-123",
+            "agent_id": "agent-456",
+            "agent_transcript_path": str(agent_transcript),
+            "transcript_path": str(Path(self.temp_dir) / "session.jsonl")
+        }
+
+        self.orchestrator.process(hook_input)
+
+        # Should append context to context.md
+        events_dir = Path(self.temp_dir) / ".toolbox" / "events"
+        request_dir = [d for d in events_dir.iterdir() if d.is_dir()][0]
+        context_file = request_dir / "context.md"
+        content = context_file.read_text()
+        self.assertIn("agent context", content)
+
+        # Should write work file
+        work_file = request_dir / "work" / "test.txt"
+        self.assertTrue(work_file.exists())
+        self.assertEqual(work_file.read_text(), "content")
+
+        # Should copy transcript
+        transcript_copy = request_dir / "session-logs" / "agent-agent-456.jsonl"
+        self.assertTrue(transcript_copy.exists())
+
+    def _create_test_request(self):
+        """Helper to create a test request."""
+        hook_input = {
+            "hook_event_name": "UserPromptSubmit",
+            "cwd": self.temp_dir,
+            "session_id": "sess-123",
+            "timestamp": "2025-12-11T10:00:00",
+            "prompt": "test",
+            "transcript_path": str(Path(self.temp_dir) / "session.jsonl")
+        }
+        session_log = Path(self.temp_dir) / "session.jsonl"
+        session_log.write_text(json.dumps({
+            "type": "user",
+            "uuid": "uuid-789",
+            "message": {"content": "test"}
+        }))
+        self.orchestrator.process(hook_input)
+
 
 if __name__ == "__main__":
     unittest.main()
