@@ -129,12 +129,10 @@ class LifecycleOrchestrator:
         if event_data.hook_event_name == "UserPromptSubmit":
             return generate_request_id(event_data.fields)
 
-        # Lookup from state
+        # Lookup from global state
         session_id = event_data.fields.get("session_id")
-        transcript_path = event_data.fields.get("transcript_path")
-
-        with State(toolbox_root, session_id, transcript_path) as state:
-            return state._global.get("session_requests", {}).get(session_id, "")
+        global_state = self._load_global_state(toolbox_root)
+        return global_state.get("session_requests", {}).get(session_id, "")
 
     def _create_request_directory(self, request_dir: Path, toolbox_root: str, request_id: str):
         """Create directory structure on first event."""
