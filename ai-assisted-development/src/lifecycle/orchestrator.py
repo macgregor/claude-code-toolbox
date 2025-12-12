@@ -260,21 +260,25 @@ class LifecycleOrchestrator:
                 for msg in pruned_messages:
                     f.write(json.dumps(msg) + '\n')
 
-    def _persist_state_changes(self, state: State, context: RequestContext):
-        """Write State changes to .state.json and .global-state.json files."""
-        # Extract start_uuid from session log
-        if context.transcript_path.exists():
+    def _persist_state_changes(self, toolbox_root: str, request_dir: Path, context: RequestContext):
+        """Write state changes to .state.json file."""
+        request_state = self._load_request_state(request_dir)
+
+        # Extract start_uuid from session log if not already set
+        if context.transcript_path.exists() and not request_state.get("start_uuid"):
             with open(context.transcript_path, 'r') as f:
                 lines = f.readlines()
                 if lines:
                     last_msg = json.loads(lines[-1])
                     start_uuid = last_msg.get("uuid", "")
-                    if start_uuid and not state["start_uuid"]:
-                        state["start_uuid"] = start_uuid
+                    if start_uuid:
+                        request_state["start_uuid"] = start_uuid
 
         # Persist agent_types changes (SubagentStart)
         if context.agent_types:
-            state["agent_types"] = context.agent_types
+            request_state["agent_types"] = context.agent_types
+
+        self._save_request_state(request_dir, request_state)
 
     def _execute_file_operations(self, context: RequestContext):
         """Execute FileOperations queued by handlers (currently none - extension point)."""
