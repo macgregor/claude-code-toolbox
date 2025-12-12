@@ -89,7 +89,7 @@ Enable statusline hook that sows plugin version, installed vs current git SHA, r
 {
   "statusLine": {
     "type": "command",
-    "command": "python ${CLAUDE_PLUGIN_ROOT}/src/agent-lifecycle.py"
+    "command": "ai-assisted-development/src/agent-lifecycle.py"
   }
 }
 ```
