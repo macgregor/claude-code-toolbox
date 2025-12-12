@@ -142,15 +142,16 @@ class LifecycleOrchestrator:
         """Route event to handler (returns None - extension point)."""
         return None
 
-    def _build_request_context(self, event_data: EventData, request_dir: Path, state: State) -> RequestContext:
+    def _build_request_context(self, event_data: EventData, request_dir: Path, request_id: str) -> RequestContext:
         """Load state data into RequestContext."""
+        request_state = self._load_request_state(request_dir)
         return RequestContext(
             session_id=event_data.fields.get("session_id", ""),
-            request_id=state._global.get("session_requests", {}).get(event_data.fields.get("session_id"), ""),
+            request_id=request_id,
             request_dir=request_dir,
             transcript_path=Path(event_data.fields.get("transcript_path", "")),
-            agent_types=state["agent_types"],
-            start_uuid=state["start_uuid"]
+            agent_types=request_state.get("agent_types", {}),
+            start_uuid=request_state.get("start_uuid")
         )
 
     def _handle_user_prompt_submit(self, context: RequestContext, event_data: EventData):
