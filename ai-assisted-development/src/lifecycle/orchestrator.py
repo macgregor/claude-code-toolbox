@@ -86,35 +86,36 @@ class LifecycleOrchestrator:
         if not request_dir.exists():
             self._create_request_directory(request_dir, toolbox_root, request_id)
 
-        # 4. Initialize context with state
+        # Register request_id for UserPromptSubmit
         session_id = event_data.fields.get("session_id")
-        transcript_path = event_data.fields.get("transcript_path")
+        if event_data.hook_event_name == "UserPromptSubmit":
+            global_state = self._load_global_state(toolbox_root)
+            if "session_requests" not in global_state:
+                global_state["session_requests"] = {}
+            global_state["session_requests"][session_id] = request_id
+            self._save_global_state(toolbox_root, global_state)
 
-        with State(toolbox_root, session_id, transcript_path) as state:
-            # For UserPromptSubmit, set request_id first before building context
-            if event_data.hook_event_name == "UserPromptSubmit":
-                state.set_request_id(request_id)
+        # Build context from state files
+        context = self._build_request_context(event_data, request_dir, request_id)
 
-            context = self._build_request_context(event_data, request_dir, state)
+        # Execute framework logic specific to this event
+        if event_data.hook_event_name == "UserPromptSubmit":
+            self._handle_user_prompt_submit(context, event_data)
+        elif event_data.hook_event_name == "SubagentStart":
+            self._handle_subagent_start(context, event_data)
+        elif event_data.hook_event_name == "SubagentStop":
+            self._handle_subagent_stop(context, event_data)
+        elif event_data.hook_event_name == "Stop":
+            self._handle_stop(context, event_data)
 
-            # 5. Execute framework logic specific to this event
-            if event_data.hook_event_name == "UserPromptSubmit":
-                self._handle_user_prompt_submit(context, event_data)
-            elif event_data.hook_event_name == "SubagentStart":
-                self._handle_subagent_start(context, event_data)
-            elif event_data.hook_event_name == "SubagentStop":
-                self._handle_subagent_stop(context, event_data)
-            elif event_data.hook_event_name == "Stop":
-                self._handle_stop(context, event_data)
+        # Persist state changes
+        self._persist_state_changes(toolbox_root, request_dir, context)
 
-            # 6. Persist state changes
-            self._persist_state_changes(state, context)
+        # Execute side effects
+        self._execute_file_operations(context)
 
-            # 7. Execute side effects
-            self._execute_file_operations(context)
-
-            # 8. Log hook event
-            self._append_hook_event(request_dir, raw_hook_input)
+        # Log hook event
+        self._append_hook_event(request_dir, raw_hook_input)
 
     def _build_event_data(self, raw_hook_input: Dict[str, Any]) -> EventData:
         """Extract/validate fields, create EventData."""
