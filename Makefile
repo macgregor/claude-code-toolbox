@@ -23,8 +23,9 @@ install-plugin: install-local-marketplace
 
 .PHONY: test
 test:
-	python -m unittest discover -s ai-assisted-development/tests -p "*-test.py" -v
+	python -m unittest discover -s ai-assisted-development/tests -p "test_*.py" -v
 
 .PHONY: test-lifecycle
 test-lifecycle:
-	python -m unittest ai-assisted-development.tests.agent-lifecycle-test -v
+	python -m unittest discover -s ai-assisted-development/tests -p "test_lifecycle_*.py" -v
+	python -m unittest discover -s ai-assisted-development/tests -p "test_integration_*.py" -v
