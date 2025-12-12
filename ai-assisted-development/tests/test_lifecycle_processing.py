@@ -24,8 +24,14 @@ class TestGetToolboxRoot(unittest.TestCase):
 
     def test_returns_cwd_from_hook_input(self):
         """get_toolbox_root should fallback to hook_input cwd."""
-        result = get_toolbox_root({"cwd": "/hook/path"})
-        self.assertEqual(result, "/hook/path")
+        # Temporarily unset TOOLBOX_ROOT to test fallback
+        old_value = os.environ.pop("TOOLBOX_ROOT", None)
+        try:
+            result = get_toolbox_root({"cwd": "/hook/path"})
+            self.assertEqual(result, "/hook/path")
+        finally:
+            if old_value is not None:
+                os.environ["TOOLBOX_ROOT"] = old_value
 
 
 class TestGenerateRequestId(unittest.TestCase):
