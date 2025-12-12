@@ -514,8 +514,9 @@ def _get_handler(self, event_name: str) -> Optional[EventHandler]:
 4. **Integration:**
    - Test with actual hook input (use statusline_input.txt)
    - Verify output matches bash script exactly
-   - Update CONTRIBUTING.md settings.json example to use agent-lifecycle.py
    - Delete statusline.sh after verification
+
+**Note:** User will manually update settings.json when ready to enable statusline.
 
 ---
 
