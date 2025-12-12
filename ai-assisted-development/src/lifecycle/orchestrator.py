@@ -67,7 +67,10 @@ class LifecycleOrchestrator:
             # 6. Persist state changes
             self._persist_state_changes(state, context)
 
-            # 7. Log hook event
+            # 7. Execute side effects
+            self._execute_file_operations(context)
+
+            # 8. Log hook event
             self._append_hook_event(request_dir, raw_hook_input)
 
     def _build_event_data(self, raw_hook_input: Dict[str, Any]) -> EventData:
@@ -230,6 +233,12 @@ class LifecycleOrchestrator:
         # Persist agent_types changes (SubagentStart)
         if context.agent_types:
             state["agent_types"] = context.agent_types
+
+    def _execute_file_operations(self, context: RequestContext):
+        """Execute FileOperations queued by handlers (currently none - extension point)."""
+        # Future: Execute context.file_operations
+        # For now, no handlers registered, so nothing to execute
+        pass
 
     def _append_hook_event(self, request_dir: Path, raw_hook_input: Dict[str, Any]):
         """Append hook event to hook-events.jsonl."""
