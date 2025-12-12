@@ -32,6 +32,30 @@ class LifecycleOrchestrator:
         temp.write_text(json.dumps(data, indent=2))
         temp.rename(path)
 
+    def _global_state_path(self, toolbox_root: str) -> Path:
+        """Path to global state file."""
+        return Path(toolbox_root) / ".toolbox" / "events" / self._global_state_file
+
+    def _request_state_path(self, request_dir: Path) -> Path:
+        """Path to request state file."""
+        return request_dir / self._request_state_file
+
+    def _load_global_state(self, toolbox_root: str) -> dict:
+        """Load global state (session_requests mapping)."""
+        return self._load_json(self._global_state_path(toolbox_root))
+
+    def _save_global_state(self, toolbox_root: str, data: dict) -> None:
+        """Save global state."""
+        self._save_json(self._global_state_path(toolbox_root), data)
+
+    def _load_request_state(self, request_dir: Path) -> dict:
+        """Load request state (agent_types, start_uuid)."""
+        return self._load_json(self._request_state_path(request_dir))
+
+    def _save_request_state(self, request_dir: Path, data: dict) -> None:
+        """Save request state."""
+        self._save_json(self._request_state_path(request_dir), data)
+
     def process(self, raw_hook_input: Dict[str, Any]):
         """Process hook event.
 
