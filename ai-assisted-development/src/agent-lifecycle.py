@@ -293,38 +293,22 @@ def parse_work_tags(text: str) -> List[Dict[str, str]]:
 
 
 def main():
-    """Read hook input and dispatch to appropriate handler."""
-    hook_input = json.load(sys.stdin)
+    """Read hook input and dispatch to orchestrator."""
+    try:
+        from lifecycle import LifecycleOrchestrator, BlockingError, NonBlockingError
 
-    # Dispatch based on event
-    event_name = hook_input.get("hook_event_name")
-
-    if event_name == "PreToolUse":
-        handle_pre_tool_use(hook_input)
-    elif event_name == "PostToolUse":
-        handle_post_tool_use(hook_input)
-    elif event_name == "UserPromptSubmit":
-        handle_user_prompt_submit(hook_input)
-    elif event_name == "Stop":
-        handle_stop_event(hook_input)
-    elif event_name == "SessionStart":
-        handle_session_start(hook_input)
-    elif event_name == "PreCompact":
-        handle_pre_compact(hook_input)
-    elif event_name == "Notification":
-        handle_notification(hook_input)
-    elif event_name == "SubagentStart":
-        handle_subagent_start(hook_input)
-    elif event_name == "SubagentStop":
-        handle_subagent_stop(hook_input)
-    elif event_name == "SessionEnd":
-        handle_session_end(hook_input)
-    elif event_name == "PostToolUseFailure":
-        handle_post_tool_use_failure(hook_input)
-    elif event_name == "PermissionRequest":
-        handle_permission_request(hook_input)
-    else:
-        print(f"[agent-lifecycle] Unknown event: {event_name}", file=sys.stderr)
+        hook_input = json.load(sys.stdin)
+        orchestrator = LifecycleOrchestrator()
+        orchestrator.process(hook_input)
+        sys.exit(0)
+    except BlockingError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(2)
+    except NonBlockingError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
