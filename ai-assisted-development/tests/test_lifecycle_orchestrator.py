@@ -34,6 +34,17 @@ class TestLifecycleOrchestrator(unittest.TestCase):
         # Should not raise
         self.orchestrator.process(hook_input)
 
+    def test_process_returns_without_request_id(self):
+        """process() should return early if no request_id found for session."""
+        hook_input = {
+            "hook_event_name": "Stop",
+            "cwd": self.temp_dir,
+            "session_id": "session-unknown",
+            "transcript_path": str(Path(self.temp_dir) / "session.jsonl")
+        }
+        # Should not raise - just returns early
+        self.orchestrator.process(hook_input)
+
     def test_process_handles_session_start(self):
         """process() should handle SessionStart event."""
         hook_input = {

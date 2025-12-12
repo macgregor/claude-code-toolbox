@@ -37,6 +37,8 @@ class LifecycleOrchestrator:
 
         # For other events, need request_id
         request_id = self._get_or_create_request_id(event_data, toolbox_root)
+        if not request_id:
+            return
         request_dir = Path(toolbox_root) / ".toolbox" / "events" / request_id
 
         # 3. Create request directory if needed
