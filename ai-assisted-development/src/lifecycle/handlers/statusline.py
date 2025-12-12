@@ -70,6 +70,53 @@ class PluginMetadata:
             pass
 
 
+class StatusLineFormatter:
+    """Formats status line output."""
+
+    def format(self, metadata: PluginMetadata, context: RequestContext) -> str:
+        """Build formatted status line string.
+
+        Args:
+            metadata: Plugin state (version, SHAs, paths, dev mode)
+            context: Request context (request_id, request_dir)
+
+        Returns:
+            Multi-line status string
+        """
+        lines = []
+
+        # Check if plugin is installed
+        if metadata.version == "unknown" or not metadata.install_path:
+            lines.append(f"{metadata.plugin_id}: ⚠️  Plugin not installed.")
+            return "\n".join(lines)
+
+        # Plugin version line
+        if metadata.needs_warning:
+            lines.append(f"{metadata.plugin_id}: v{metadata.version} ⚠️")
+            lines.append(
+                f"📦 Installed: {metadata.installed_sha[:7]} | "
+                f"Current: {metadata.current_sha[:7]}"
+            )
+        else:
+            lines.append(f"{metadata.plugin_id}: v{metadata.version}")
+            lines.append(f"📦 Installed: {metadata.installed_sha[:7]}")
+
+        # Request info
+        if context.request_id:
+            lines.append(f"📁 Request: {context.request_id}")
+
+            # Abbreviate home directory
+            display_path = str(context.request_dir)
+            home_str = str(Path.home())
+            if display_path.startswith(home_str):
+                display_path = "~" + display_path[len(home_str):]
+            lines.append(f"💾 {display_path}/")
+        else:
+            lines.append("📁 No active request")
+
+        return "\n".join(lines)
+
+
 class StatusLineHandler(EventHandler):
     """Handler for StatusLine hook events."""
 

@@ -10,7 +10,7 @@ from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from lifecycle.handlers.statusline import PluginMetadata, StatusLineHandler
+from lifecycle.handlers.statusline import PluginMetadata, StatusLineFormatter, StatusLineHandler
 from lifecycle.models import RequestContext, EventData
 from lifecycle.errors import NonBlockingError
 
@@ -223,6 +223,110 @@ class TestPluginMetadata(unittest.TestCase):
         mock_run.assert_not_called()
         self.assertFalse(metadata.is_dev_mode)
         self.assertEqual(metadata.current_sha, "")
+
+
+class TestStatusLineFormatter(unittest.TestCase):
+    """Test StatusLineFormatter class."""
+
+    def test_plugin_not_installed_message(self):
+        """Should show 'Plugin not installed' when version is unknown."""
+        metadata = PluginMetadata.__new__(PluginMetadata)
+        metadata.plugin_id = "test-plugin@test-marketplace"
+        metadata.version = "unknown"
+        metadata.install_path = ""
+
+        context = RequestContext(
+            session_id="test-session",
+            request_id="test-request",
+            request_dir=Path("/workspace/.toolbox/events/test-request"),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        formatter = StatusLineFormatter()
+        output = formatter.format(metadata, context)
+
+        self.assertIn("Plugin not installed", output)
+        self.assertIn("⚠️", output)
+
+    def test_normal_mode_output(self):
+        """Should show single SHA line in normal mode."""
+        metadata = PluginMetadata.__new__(PluginMetadata)
+        metadata.plugin_id = "test-plugin@test-marketplace"
+        metadata.version = "1.0.0"
+        metadata.installed_sha = "abc123def456"
+        metadata.current_sha = ""
+        metadata.install_path = "/path/to/plugin"
+        metadata.needs_warning = False
+
+        context = RequestContext(
+            session_id="test-session",
+            request_id="2025-12-11T00-15-32_e36738f5",
+            request_dir=Path("/home/user/.toolbox/events/2025-12-11T00-15-32_e36738f5"),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        formatter = StatusLineFormatter()
+        with patch("lifecycle.handlers.statusline.Path.home", return_value=Path("/home/user")):
+            output = formatter.format(metadata, context)
+
+        self.assertIn("test-plugin@test-marketplace: v1.0.0", output)
+        self.assertIn("📦 Installed: abc123d", output)  # 7 chars
+        self.assertIn("📁 Request: 2025-12-11T00-15-32_e36738f5", output)
+        self.assertIn("💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/", output)
+        self.assertNotIn("Current:", output)  # Not dev mode
+
+    def test_dev_mode_warning_output(self):
+        """Should show both SHAs and warning in dev mode."""
+        metadata = PluginMetadata.__new__(PluginMetadata)
+        metadata.plugin_id = "test-plugin@test-marketplace"
+        metadata.version = "1.0.0"
+        metadata.installed_sha = "abc123def456"
+        metadata.current_sha = "fedcba987654"
+        metadata.install_path = "/path/to/plugin"
+        metadata.needs_warning = True
+
+        context = RequestContext(
+            session_id="test-session",
+            request_id="test-request",
+            request_dir=Path("/home/user/.toolbox/events/test-request"),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        formatter = StatusLineFormatter()
+        output = formatter.format(metadata, context)
+
+        self.assertIn("test-plugin@test-marketplace: v1.0.0 ⚠️", output)
+        self.assertIn("📦 Installed: abc123d | Current: fedcba9", output)
+
+    def test_no_active_request(self):
+        """Should show 'No active request' when request_id empty."""
+        metadata = PluginMetadata.__new__(PluginMetadata)
+        metadata.plugin_id = "test-plugin@test-marketplace"
+        metadata.version = "1.0.0"
+        metadata.installed_sha = "abc123"
+        metadata.install_path = "/path"
+        metadata.needs_warning = False
+
+        context = RequestContext(
+            session_id="test-session",
+            request_id="",  # Empty
+            request_dir=Path(""),
+            transcript_path=Path("/path/to/transcript"),
+            agent_types={},
+            start_uuid=None
+        )
+
+        formatter = StatusLineFormatter()
+        output = formatter.format(metadata, context)
+
+        self.assertIn("📁 No active request", output)
+        self.assertNotIn("💾", output)  # No path line
 
 
 if __name__ == "__main__":
