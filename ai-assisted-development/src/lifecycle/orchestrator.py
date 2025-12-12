@@ -108,9 +108,29 @@ class LifecycleOrchestrator:
 
     def _build_event_data(self, raw_hook_input: Dict[str, Any]) -> EventData:
         """Extract/validate fields, create EventData."""
+
+        # Infer StatusLine if hook_event_name missing
+        hook_event_name = raw_hook_input.get("hook_event_name", "")
+        if not hook_event_name:
+            hook_event_name = "StatusLine"
+
+        # Validate required fields (StatusLine events need all three)
+        if hook_event_name == "StatusLine":
+            session_id = raw_hook_input.get("session_id")
+            transcript_path = raw_hook_input.get("transcript_path")
+            cwd = raw_hook_input.get("cwd")
+
+            if not session_id or not transcript_path or not cwd:
+                raise NonBlockingError(
+                    f"Invalid hook input: missing required fields "
+                    f"(session_id={bool(session_id)}, "
+                    f"transcript_path={bool(transcript_path)}, "
+                    f"cwd={bool(cwd)})"
+                )
+
         return EventData(
-            hook_event_name=raw_hook_input.get("hook_event_name", ""),
-            raw_hook_input=raw_hook_input  # No JSON serialization
+            hook_event_name=hook_event_name,
+            raw_hook_input=raw_hook_input
         )
 
     def _get_or_create_request_id(self, event_data: EventData, toolbox_root: str) -> str:

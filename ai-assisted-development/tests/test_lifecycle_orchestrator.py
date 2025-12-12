@@ -171,6 +171,49 @@ class TestLifecycleOrchestrator(unittest.TestCase):
         self.assertIsInstance(event_data.raw_hook_input, dict)
         self.assertEqual(event_data.raw_hook_input["session_id"], "test-session")
 
+    def test_missing_required_fields_raises_nonblocking_error(self):
+        """Missing session_id, transcript_path, or cwd should raise NonBlockingError."""
+        from lifecycle.errors import NonBlockingError
+
+        orchestrator = LifecycleOrchestrator()
+
+        # Missing session_id (no hook_event_name, so inferred as StatusLine)
+        with self.assertRaises(NonBlockingError) as cm:
+            orchestrator._build_event_data({
+                "transcript_path": "/path",
+                "cwd": "/workspace"
+            })
+        self.assertIn("session_id", str(cm.exception))
+
+        # Missing transcript_path (no hook_event_name, so inferred as StatusLine)
+        with self.assertRaises(NonBlockingError):
+            orchestrator._build_event_data({
+                "session_id": "test",
+                "cwd": "/workspace"
+            })
+
+        # Missing cwd (no hook_event_name, so inferred as StatusLine)
+        with self.assertRaises(NonBlockingError):
+            orchestrator._build_event_data({
+                "session_id": "test",
+                "transcript_path": "/path"
+            })
+
+    def test_missing_hook_event_name_infers_statusline(self):
+        """Missing hook_event_name should be inferred as StatusLine."""
+        orchestrator = LifecycleOrchestrator()
+
+        hook_input = {
+            "session_id": "test-session",
+            "transcript_path": "/path/to/transcript.jsonl",
+            "cwd": "/workspace"
+            # No hook_event_name
+        }
+
+        event_data = orchestrator._build_event_data(hook_input)
+
+        self.assertEqual(event_data.hook_event_name, "StatusLine")
+
     def _create_test_request(self):
         """Helper to create a test request."""
         hook_input = {
