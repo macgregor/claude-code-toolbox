@@ -5,13 +5,13 @@ description: >
   maintainability. Establishes clean separation between hook interface, orchestration,
   state management, and event handlers.
 created: 2025-12-11
-status: design
+status: implemented
 ---
 
 # Agent Lifecycle Refactoring Design
 
 **Created**: 2025-12-11
-**Status**: Design
+**Status**: Implemented
 
 ---
 
