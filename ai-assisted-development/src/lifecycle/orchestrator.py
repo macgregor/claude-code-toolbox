@@ -8,7 +8,6 @@ from typing import Dict, Any, Optional
 from .errors import NonBlockingError
 from .models import RequestContext, EventData
 from .processing import get_toolbox_root, generate_request_id, create_request_directory, parse_context_tags, parse_work_tags
-from .state import State
 from .handlers import EventHandler
 
 
