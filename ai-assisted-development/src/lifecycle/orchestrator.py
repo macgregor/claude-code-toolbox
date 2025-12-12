@@ -101,6 +101,11 @@ class LifecycleOrchestrator:
             self._handle_subagent_stop(context, event_data)
         elif event_data.hook_event_name == "Stop":
             self._handle_stop(context, event_data)
+        elif event_data.hook_event_name == "StatusLine":
+            handler = self._get_handler("StatusLine")
+            if handler:
+                handler.handle(context, event_data)
+            return  # StatusLine doesn't persist state or append events
 
         self._persist_state_changes(toolbox_root, request_dir, context)
         self._execute_file_operations(context)

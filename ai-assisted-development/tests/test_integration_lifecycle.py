@@ -6,10 +6,12 @@ import tempfile
 import json
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from lifecycle import LifecycleOrchestrator
+from lifecycle.errors import NonBlockingError
 
 
 class TestLifecycleIntegration(unittest.TestCase):
@@ -120,6 +122,86 @@ class TestLifecycleIntegration(unittest.TestCase):
 
         pruned_log = request_dir / "session-logs" / "sess-integration-pruned.jsonl"
         self.assertTrue(pruned_log.exists())
+
+    def test_statusline_event_calls_handler_and_prints(self):
+        """StatusLine event should invoke handler and print output."""
+        # Create minimal global state
+        events_dir = Path(self.temp_dir) / ".toolbox" / "events"
+        events_dir.mkdir(parents=True)
+
+        global_state = {
+            "session_requests": {
+                "test-session-123": "2025-12-12T10-00-00_abc123"
+            }
+        }
+        (events_dir / ".global-state.json").write_text(json.dumps(global_state))
+
+        # Create request directory and state
+        request_dir = events_dir / "2025-12-12T10-00-00_abc123"
+        request_dir.mkdir(parents=True)
+        (request_dir / ".state.json").write_text(json.dumps({}))
+
+        # StatusLine hook input (no hook_event_name)
+        hook_input = {
+            "session_id": "test-session-123",
+            "transcript_path": str(Path(self.temp_dir) / "transcript.jsonl"),
+            "cwd": self.temp_dir
+        }
+
+        with patch("builtins.print") as mock_print, \
+             patch("lifecycle.handlers.statusline.PluginMetadata._load"):  # Skip file I/O
+            self.orchestrator.process(hook_input)
+
+        # Verify print was called (handler executed)
+        mock_print.assert_called_once()
+        output = mock_print.call_args[0][0]
+        self.assertIsInstance(output, str)
+        self.assertTrue(len(output) > 0)
+
+    def test_statusline_does_not_persist_state(self):
+        """StatusLine should not append to hook-events.jsonl."""
+        # Create minimal global state
+        events_dir = Path(self.temp_dir) / ".toolbox" / "events"
+        events_dir.mkdir(parents=True)
+
+        global_state = {
+            "session_requests": {
+                "test-session-456": "2025-12-12T10-00-00_def456"
+            }
+        }
+        (events_dir / ".global-state.json").write_text(json.dumps(global_state))
+
+        # Create request directory
+        request_dir = events_dir / "2025-12-12T10-00-00_def456"
+        request_dir.mkdir(parents=True)
+        (request_dir / ".state.json").write_text(json.dumps({}))
+
+        hook_input = {
+            "session_id": "test-session-456",
+            "transcript_path": str(Path(self.temp_dir) / "transcript.jsonl"),
+            "cwd": self.temp_dir
+        }
+
+        with patch("builtins.print"), \
+             patch("lifecycle.handlers.statusline.PluginMetadata._load"):
+            self.orchestrator.process(hook_input)
+
+        # Verify hook-events.jsonl was NOT created
+        hook_events = request_dir / "hook-events.jsonl"
+        self.assertFalse(hook_events.exists())
+
+    def test_statusline_validates_required_fields(self):
+        """StatusLine should raise NonBlockingError if required fields missing."""
+        # Missing session_id
+        hook_input = {
+            "transcript_path": "/path/to/transcript",
+            "cwd": self.temp_dir
+        }
+
+        with self.assertRaises(NonBlockingError) as cm:
+            self.orchestrator.process(hook_input)
+
+        self.assertIn("missing required fields", str(cm.exception))
 
 
 if __name__ == "__main__":

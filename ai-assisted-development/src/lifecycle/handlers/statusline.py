@@ -140,7 +140,7 @@ class StatusLineHandler(EventHandler):
             metadata = PluginMetadata(self.PLUGIN_ID, self.MARKETPLACE_ID)
             formatter = StatusLineFormatter()
             output = formatter.format(metadata, context)
-            print(output)
+            print(output, flush=True)
             return context
         except Exception as e:
             raise NonBlockingError(f"StatusLine failed: {e}")
