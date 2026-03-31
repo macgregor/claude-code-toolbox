@@ -1,7 +1,8 @@
-"""Tests for StatusLine event handler."""
+"""Tests for standalone statusline script."""
 
+import io
 import json
-import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -10,9 +11,7 @@ from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from lifecycle.handlers.statusline import PluginMetadata, StatusLineFormatter, StatusLineHandler
-from lifecycle.models import RequestContext, EventData
-from lifecycle.errors import NonBlockingError
+from statusline import PluginMetadata, format_statusline, main
 
 
 class TestPluginMetadata(unittest.TestCase):
@@ -27,7 +26,6 @@ class TestPluginMetadata(unittest.TestCase):
 
     def tearDown(self):
         """Clean up temp directory."""
-        import shutil
         shutil.rmtree(self.temp_dir)
 
     def test_reads_installed_plugins_json(self):
@@ -157,7 +155,6 @@ class TestPluginMetadata(unittest.TestCase):
              patch("subprocess.run", return_value=mock_result) as mock_run:
             metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
 
-        # Verify git was called
         mock_run.assert_called_once()
         args = mock_run.call_args[0][0]
         self.assertEqual(args[0], "git")
@@ -214,7 +211,6 @@ class TestPluginMetadata(unittest.TestCase):
         }
 
         (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
-        # No known_marketplaces.json - not dev mode
 
         with patch("pathlib.Path.home", return_value=self.home_path), \
              patch("subprocess.run") as mock_run:
@@ -225,167 +221,92 @@ class TestPluginMetadata(unittest.TestCase):
         self.assertEqual(metadata.current_sha, "")
 
 
-class TestStatusLineFormatter(unittest.TestCase):
-    """Test StatusLineFormatter class."""
+class TestFormatStatusline(unittest.TestCase):
+    """Test format_statusline function."""
 
-    def test_plugin_not_installed_message(self):
-        """Should show 'Plugin not installed' when version is unknown."""
-        metadata = PluginMetadata.__new__(PluginMetadata)
-        metadata.plugin_id = "test-plugin@test-marketplace"
-        metadata.version = "unknown"
-        metadata.install_path = ""
-
-        context = RequestContext(
-            session_id="test-session",
-            request_id="test-request",
-            request_dir=Path("/workspace/.toolbox/events/test-request"),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
-        )
-
-        formatter = StatusLineFormatter()
-        output = formatter.format(metadata, context)
-
-        self.assertIn("Plugin not installed", output)
-        self.assertIn("⚠️", output)
-
-    def test_normal_mode_output(self):
-        """Should show single SHA line in normal mode."""
+    def _make_metadata(self, **overrides):
+        """Create a PluginMetadata without calling _load."""
         metadata = PluginMetadata.__new__(PluginMetadata)
         metadata.plugin_id = "test-plugin@test-marketplace"
         metadata.version = "1.0.0"
         metadata.installed_sha = "abc123def456"
         metadata.current_sha = ""
         metadata.install_path = "/path/to/plugin"
+        metadata.is_dev_mode = False
         metadata.needs_warning = False
+        for key, value in overrides.items():
+            setattr(metadata, key, value)
+        return metadata
 
-        context = RequestContext(
-            session_id="test-session",
-            request_id="2025-12-11T00-15-32_e36738f5",
-            request_dir=Path("/home/user/.toolbox/events/2025-12-11T00-15-32_e36738f5"),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
-        )
+    def test_plugin_not_installed_message(self):
+        """Should show 'Plugin not installed' when version is unknown."""
+        metadata = self._make_metadata(version="unknown", install_path="")
+        output = format_statusline(metadata)
 
-        formatter = StatusLineFormatter()
-        with patch("lifecycle.handlers.statusline.Path.home", return_value=Path("/home/user")):
-            output = formatter.format(metadata, context)
+        self.assertIn("Plugin not installed", output)
+
+    def test_plugin_not_installed_when_no_install_path(self):
+        """Should show 'Plugin not installed' when install_path is empty."""
+        metadata = self._make_metadata(install_path="")
+        output = format_statusline(metadata)
+
+        self.assertIn("Plugin not installed", output)
+
+    def test_normal_mode_output(self):
+        """Should show version and single SHA line in normal mode."""
+        metadata = self._make_metadata()
+        output = format_statusline(metadata)
 
         self.assertIn("test-plugin@test-marketplace: v1.0.0", output)
-        self.assertIn("📦 Installed: abc123d", output)  # 7 chars
-        self.assertIn("📁 Request: 2025-12-11T00-15-32_e36738f5", output)
-        self.assertIn("💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/", output)
-        self.assertNotIn("Current:", output)  # Not dev mode
+        self.assertIn("Installed: abc123d", output)
+        self.assertNotIn("Current:", output)
 
     def test_dev_mode_warning_output(self):
         """Should show both SHAs and warning in dev mode."""
-        metadata = PluginMetadata.__new__(PluginMetadata)
-        metadata.plugin_id = "test-plugin@test-marketplace"
-        metadata.version = "1.0.0"
-        metadata.installed_sha = "abc123def456"
-        metadata.current_sha = "fedcba987654"
-        metadata.install_path = "/path/to/plugin"
-        metadata.needs_warning = True
-
-        context = RequestContext(
-            session_id="test-session",
-            request_id="test-request",
-            request_dir=Path("/home/user/.toolbox/events/test-request"),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
+        metadata = self._make_metadata(
+            current_sha="fedcba987654",
+            needs_warning=True
         )
+        output = format_statusline(metadata)
 
-        formatter = StatusLineFormatter()
-        output = formatter.format(metadata, context)
+        self.assertIn("test-plugin@test-marketplace: v1.0.0", output)
+        self.assertIn("Installed: abc123d | Current: fedcba9", output)
 
-        self.assertIn("test-plugin@test-marketplace: v1.0.0 ⚠️", output)
-        self.assertIn("📦 Installed: abc123d | Current: fedcba9", output)
-
-    def test_no_active_request(self):
-        """Should show 'No active request' when request_id empty."""
-        metadata = PluginMetadata.__new__(PluginMetadata)
-        metadata.plugin_id = "test-plugin@test-marketplace"
-        metadata.version = "1.0.0"
-        metadata.installed_sha = "abc123"
-        metadata.install_path = "/path"
-        metadata.needs_warning = False
-
-        context = RequestContext(
-            session_id="test-session",
-            request_id="",  # Empty
-            request_dir=Path(""),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
+    def test_warning_emoji_present(self):
+        """Should include warning emoji when needs_warning is True."""
+        metadata = self._make_metadata(
+            current_sha="fedcba987654",
+            needs_warning=True
         )
+        output = format_statusline(metadata)
 
-        formatter = StatusLineFormatter()
-        output = formatter.format(metadata, context)
-
-        self.assertIn("📁 No active request", output)
-        self.assertNotIn("💾", output)  # No path line
+        self.assertIn("v1.0.0 ⚠️", output)
 
 
-class TestStatusLineHandler(unittest.TestCase):
-    """Test StatusLineHandler class."""
+class TestMain(unittest.TestCase):
+    """Test main() function."""
 
-    def test_handler_prints_formatted_output(self):
-        """Handler should create metadata, format, and print output."""
-        context = RequestContext(
-            session_id="test-session",
-            request_id="test-request",
-            request_dir=Path("/workspace/.toolbox/events/test-request"),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
-        )
+    def test_consumes_stdin_and_prints_output(self):
+        """Should read stdin JSON and print statusline to stdout."""
+        stdin_data = json.dumps({"session_id": "test", "cwd": "/workspace"})
 
-        event_data = EventData(
-            hook_event_name="StatusLine",
-            raw_hook_input={"session_id": "test", "cwd": "/workspace", "transcript_path": "/path"}
-        )
+        with patch("sys.stdin", io.StringIO(stdin_data)), \
+             patch("builtins.print") as mock_print, \
+             patch.object(PluginMetadata, "_load"):
+            main()
 
-        handler = StatusLineHandler()
-
-        with patch("builtins.print") as mock_print, \
-             patch.object(PluginMetadata, "_load"):  # Skip actual file reads
-            result = handler.handle(context, event_data)
-
-        # Should print something
         mock_print.assert_called_once()
         output = mock_print.call_args[0][0]
         self.assertIsInstance(output, str)
 
-        # Should return unchanged context
-        self.assertEqual(result, context)
+    def test_handles_empty_stdin(self):
+        """Should not crash when stdin is empty."""
+        with patch("sys.stdin", io.StringIO("")), \
+             patch("builtins.print") as mock_print, \
+             patch.object(PluginMetadata, "_load"):
+            main()
 
-    def test_handler_raises_nonblocking_error_on_failure(self):
-        """Handler should raise NonBlockingError if metadata or formatter fails."""
-        context = RequestContext(
-            session_id="test-session",
-            request_id="test-request",
-            request_dir=Path("/workspace/.toolbox/events/test-request"),
-            transcript_path=Path("/path/to/transcript"),
-            agent_types={},
-            start_uuid=None
-        )
-
-        event_data = EventData(
-            hook_event_name="StatusLine",
-            raw_hook_input={"session_id": "test", "cwd": "/workspace", "transcript_path": "/path"}
-        )
-
-        handler = StatusLineHandler()
-
-        # Make PluginMetadata raise an exception
-        with patch.object(PluginMetadata, "_load", side_effect=Exception("Test error")):
-            with self.assertRaises(NonBlockingError) as cm:
-                handler.handle(context, event_data)
-
-            self.assertIn("StatusLine failed", str(cm.exception))
+        mock_print.assert_called_once()
 
 
 if __name__ == "__main__":

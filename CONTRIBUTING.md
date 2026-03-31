@@ -6,7 +6,6 @@ description: >
 categories: [workflow, development]
 tags: [setup, testing, building, devcontainer]
 related_docs:
-  - ARCHITECTURE.md
   - docs/devcontainer.md
   - docs/claude-code-reference.md
 complexity: basic
@@ -32,14 +31,18 @@ claude plugin list | grep ai-assisted-development
 
 ```
 .claude-plugin/
-└── plugin.json              # Marketplace Manifest
+└── marketplace.json         # Marketplace Manifest
 ai-assisted-development/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin Manifest
 ├── agents/                  # Subagent definitions
+├── commands/                # Slash commands
 ├── hooks/
-│   └── hooks.json           # Hook configuration
-├── src/                     # Source code used by hooks and agents
+│   └── hooks.json           # Hook configuration (currently empty)
+├── scripts/                 # Validation scripts for agent output
+├── src/
+│   └── statusline.py        # Statusline display script
+├── templates/               # Report templates for agents
 └── tests/                   # Unit tests
 ```
 
@@ -48,11 +51,9 @@ ai-assisted-development/
 - Modifying agent/command prompts (may require Claude restart due to caching)
 - Changing `plugin.json` metadata
 
-**What changes are "hot-swappable" (dangerous):**
-- Hook handler scripts (`src/*.py`, `src/*.sh`) - changes apply immediately on next hook execution
-- Hook configuration (`hooks/hooks.json`) - changes apply immediately on plugin reinstall
-
-Hot-swappable changes are dangerous because they take effect without a restart, potentially breaking your active session.
+**What changes are "hot-swappable":**
+- The statusline script (`src/statusline.py`) - changes apply immediately
+- Validation scripts (`scripts/*.sh`) - changes apply immediately
 
 ## Development Workflow
 
@@ -73,41 +74,34 @@ The install target adds the repository as a local marketplace, removes any exist
 ```bash
 # Run all tests
 make test
-
-# Run lifecycle tests only
-make test-lifecycle
 ```
 
 Tests use Python unittest. See `ai-assisted-development/tests/` for test files.
 
 ### Debug Status Line
 
-Enable statusline hook that shows plugin version, installed vs current git SHA, request ID, and request directory. Warning appears when local commits exist that aren't installed.
+Shows plugin version and installed git SHA. Warning appears when local commits exist that aren't installed (dev mode only).
 
 ```json
 // .claude/settings.json or .claude/settings.local.json
 {
   "statusLine": {
     "type": "command",
-    "command": "ai-assisted-development/src/agent-lifecycle.py"
+    "command": "ai-assisted-development/src/statusline.py"
   }
 }
 ```
 
 Example output (synced):
 ```
-ai-assisted-development@claude-code-toolbox: v0.1.0
+ai-assisted-development@claude-code-toolbox: v1.0.0
 📦 Installed: a1b2c3d
-📁 Request: 2025-12-11T00-15-32_e36738f5
-💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
 ```
 
 Example output (out of sync):
 ```
-ai-assisted-development@claude-code-toolbox: v0.1.0 ⚠️
+ai-assisted-development@claude-code-toolbox: v1.0.0 ⚠️
 📦 Installed: a1b2c3d | Current: f8e6b21
-📁 Request: 2025-12-11T00-15-32_e36738f5
-💾 ~/.toolbox/events/2025-12-11T00-15-32_e36738f5/
 ```
 
 ### Isolated Development
@@ -131,35 +125,9 @@ claude-isolated --rebuild /path/to/project
 
 See [docs/devcontainer.md](docs/devcontainer.md) for VS Code setup and internals.
 
-## Safely Updating Hook Handlers
+## Hooks
 
-**When to use this procedure:**
-- Modifying any file in `src/` that hooks execute
-- Changing `hooks/hooks.json` or `.claude/settings.json` hook configuration
-- Moving/renaming files referenced by hooks
-
-**Why this is dangerous:**
-Hook changes are hot-swappable - they take effect on next execution without restart. Breaking a hook script (wrong paths, errors, blocking behavior, non-0 exit codes) has the potential to completely break Claude Code.
-
-**Safe procedure:**
-
-1. Disable hooks in `hooks.json`. 
-    - If you arent sure which specific hooks to disable, replace entire contents with: `{"hooks": {}}`
-    - This ensures broken hooks can't execute
-2. Make code changes:
-    - Make absolutely sure the changes are functional, tests are passing
-    - triple check paths that go in `hooks.json` are correct for when installed as a plugin
-    - missing paths, script errors and non-0 error codes have the potential to completely break claude code
-3. Re-enable hooks.
-    - be 100% sure everything is correct before you re-enable any hooks 
-
-**Recovery if hooks break:**
-- You cannot fix from within Claude Code
-- Exit immediately (`/exit`)
-- Restore `hooks/hooks.json` to `{"hooks": {}}` in separate terminal
-- Reinstall plugin
-- Fix the broken script
-- Repeat safe procedure
+No hooks are currently active (`hooks.json` is empty). If hooks are added in the future, note that hook changes are hot-swappable and take effect without restart. Breaking a hook script can completely break Claude Code. Test thoroughly before enabling.
 
 ## Development Gotchas
 

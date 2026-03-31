@@ -392,17 +392,14 @@ Your final message must contain TWO parts:
 
 **1. Context summary** - What you analyzed and found:
 ```
-<context>
 Reviewed {document_path} ({line_count} lines, {doc_type} document)
 Found {total_issues} issues: {high} high-confidence, {medium} medium-confidence, {low} low-confidence
 Overall quality score: {score}/10
 Top issues: {category1} ({count1}), {category2} ({count2})
-</context>
 ```
 
-**2. JSON report** - Structured findings wrapped in work tag:
-```
-<work filename="document-review-report.json">
+**2. JSON report** - Structured findings:
+```json
 {
   "document": "path/to/document.md",
   "reviewed_at": "2025-12-09T14:30:22Z",
@@ -435,14 +432,11 @@ Top issues: {category1} ({count1}), {category2} ({count2})
     "markdown": 9.5
   }
 }
-</work>
 ```
 
 **Critical requirements:**
-- Context must be concise (3-5 lines max)
+- Context summary must be concise (3-5 lines max)
 - JSON must be valid and complete
-- Filename is just the filename (framework handles storage location)
-- Framework will write JSON to `.toolbox/events/{request-id}/work/document-review-report.json`
 
 **No issues found:**
 - Return report with empty issues array
@@ -453,10 +447,10 @@ Top issues: {category1} ({count1}), {category2} ({count2})
 
 **File type validation:**
 - Check file extension before review
-- If not `.md`: Output error JSON in work tag: `<work filename="error.json">{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{type}"}</work>`
+- If not `.md`: Output error JSON: `{"error": "Document reviewer only supports markdown files", "file": "{filename}", "detected_type": "{type}"}`
 
 **Path validation:**
-- If document doesn't exist: Output error JSON in work tag: `<work filename="error.json">{"error": "Document not found", "path": "{path}"}</work>`
+- If document doesn't exist: Output error JSON: `{"error": "Document not found", "path": "{path}"}`
 
 **Empty or minimal documents:**
 - Process basic checks (frontmatter, markdown)

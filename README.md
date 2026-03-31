@@ -1,18 +1,18 @@
 # Claude Code Toolbox
 
-Infrastructure for agent coordination. Track agent execution, persist context across sessions, and build multi-agent workflows.
+Development workflow agents for Claude Code. Research, synthesize, design, and review -- with structured output and validation.
 
 ## What This Does
 
-The `ai-assisted-development` plugin observes agent execution via hooks and stores:
-- User prompts and agent outputs
-- Agent-created artifacts
-- Session logs pruned to request boundaries
-- Complete audit trail
+The `ai-assisted-development` plugin provides specialized agents for common development tasks:
 
-Agents coordinate without coupling. They output tags; the system extracts them. No special tools required.
+- **Web Research** -- Structured web research with validated report output
+- **Codebase Research** -- Architectural analysis of repositories
+- **Synthesis** -- Combine research reports into focused insights
+- **Document Reviewer** -- Quality analysis of markdown documentation
+- **Statusline** -- Shows plugin version and installation status in Claude Code
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for design details.
+Agents produce validated, structured output using templates and validation scripts.
 
 ## Quick Start
 
@@ -26,24 +26,18 @@ make install-plugin
 
 ### Use on Your Projects
 
-Navigate to any repository and use Claude Code normally. The plugin tracks execution automatically:
+Navigate to any repository and use Claude Code normally:
 
 ```bash
 cd ~/your-project
 claude
 ```
 
-Check `.toolbox/events/` for captured context and artifacts.
+Invoke agents via commands (e.g. `/web-research "topic"`) or spawn them directly.
 
 ## Documentation
 
-**Using:**
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and lifecycle tracking
-- [docs/devcontainer.md](docs/devcontainer.md) - Isolated development environment
-
-**Building:**
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Local development setup and testing
+- [docs/devcontainer.md](docs/devcontainer.md) - Isolated development environment
 - [docs/claude-code-reference.md](docs/claude-code-reference.md) - Platform features and constraints
-
-**Learning:**
 - [docs/ai-learning-material.md](docs/ai-learning-material.md) - AI development resources

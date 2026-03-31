@@ -9,7 +9,6 @@ Build infrastructure for agent coordination using Claude Code platform. Incremen
 ## Always Load
 
 Core project documentation (always loaded via @):
-- @ARCHITECTURE.md - System design and lifecycle tracking
 - @CONTRIBUTING.md - Development workflow, building, testing, installing
 - @README.md - User-facing overview and doc index
 
@@ -24,7 +23,7 @@ Load these when relevant to your task:
 **When working with devcontainer**:
 - docs/devcontainer.md - Isolated development environment
 
-**When working with hook events or session logs**:
+**Reference material (Claude Code platform)**:
 - docs/appendix/session-log-messages.md - Message formats for conversation history
 - docs/appendix/hook-input-messages.md - Event notifications for automation
 
@@ -37,7 +36,6 @@ Documents that need to be kept up to date when sources of truth change:
 - README.md
 - CONTRIBUTING.md
 - CLAUDE.md
-- ARCHITECTURE.md
 - docs/*.md (depth one only)
 - docs/appendix/*.md (depth one only)
 
