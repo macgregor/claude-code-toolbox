@@ -155,8 +155,46 @@ class TestPluginMetadata(unittest.TestCase):
 
         self.assertFalse(metadata.is_dev_mode)
 
+    def test_runs_git_in_source_path(self):
+        """Should run git in source repo path, not install cache path."""
+        installed_plugins = {
+            "version": 2,
+            "plugins": {
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/cache/plugin"
+                    }
+                ]
+            }
+        }
+
+        known_marketplaces = {
+            "test-marketplace": {
+                "source": {"source": "directory", "path": "/path/to/source/repo"},
+                "installLocation": "/path/to/marketplace"
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+        (self.claude_plugins / "known_marketplaces.json").write_text(json.dumps(known_marketplaces))
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "def456789\n"
+
+        with patch("pathlib.Path.home", return_value=self.home_path), \
+             patch("subprocess.run", return_value=mock_result) as mock_run:
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[2], "/path/to/source/repo")
+
     def test_runs_git_in_dev_mode(self):
-        """Should run git rev-parse HEAD in dev mode."""
+        """Should fall back to install path when source path not available."""
         installed_plugins = {
             "version": 2,
             "plugins": {

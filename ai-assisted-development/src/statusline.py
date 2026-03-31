@@ -54,18 +54,22 @@ class PluginMetadata:
                     self.install_path = plugin.get("installPath", "")
 
             # Read known_marketplaces.json for dev mode detection
+            source_path = ""
             marketplaces_path = Path.home() / ".claude" / "plugins" / "known_marketplaces.json"
             if marketplaces_path.exists():
                 data = json.loads(marketplaces_path.read_text())
                 marketplace = data.get(self.marketplace_id, {})
                 source = marketplace.get("source", {})
                 self.is_dev_mode = source.get("source") == "directory"
+                source_path = source.get("path", "")
 
             # Run git in dev mode to check for SHA mismatch
-            if self.is_dev_mode and self.install_path:
+            # Use source repo path (not install cache) to get actual HEAD
+            git_path = source_path or self.install_path
+            if self.is_dev_mode and git_path:
                 try:
                     result = subprocess.run(
-                        ["git", "-C", self.install_path, "rev-parse", "HEAD"],
+                        ["git", "-C", git_path, "rev-parse", "HEAD"],
                         capture_output=True,
                         text=True,
                         timeout=2
