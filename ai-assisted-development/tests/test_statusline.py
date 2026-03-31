@@ -31,13 +31,16 @@ class TestPluginMetadata(unittest.TestCase):
     def test_reads_installed_plugins_json(self):
         """Should read version, gitCommitSha, installPath from installed_plugins.json."""
         installed_plugins = {
-            "version": 1,
+            "version": 2,
             "plugins": {
-                "test-plugin@test-marketplace": {
-                    "version": "1.0.0",
-                    "gitCommitSha": "abc123def456",
-                    "installPath": "/path/to/plugin"
-                }
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123def456",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 
@@ -62,16 +65,41 @@ class TestPluginMetadata(unittest.TestCase):
         self.assertEqual(metadata.installed_sha, "unknown")
         self.assertEqual(metadata.install_path, "")
 
-    def test_detects_dev_mode_from_known_marketplaces(self):
-        """Should detect dev mode when source.source == 'directory'."""
+    def test_reads_v1_dict_format(self):
+        """Should handle old v1 format where plugin entry is a dict, not an array."""
         installed_plugins = {
             "version": 1,
             "plugins": {
                 "test-plugin@test-marketplace": {
                     "version": "1.0.0",
-                    "gitCommitSha": "abc123",
+                    "gitCommitSha": "abc123def456",
                     "installPath": "/path/to/plugin"
                 }
+            }
+        }
+
+        (self.claude_plugins / "installed_plugins.json").write_text(json.dumps(installed_plugins))
+
+        with patch("pathlib.Path.home", return_value=self.home_path):
+            metadata = PluginMetadata("test-plugin@test-marketplace", "test-marketplace")
+
+        self.assertEqual(metadata.version, "1.0.0")
+        self.assertEqual(metadata.installed_sha, "abc123def456")
+        self.assertEqual(metadata.install_path, "/path/to/plugin")
+
+    def test_detects_dev_mode_from_known_marketplaces(self):
+        """Should detect dev mode when source.source == 'directory'."""
+        installed_plugins = {
+            "version": 2,
+            "plugins": {
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 
@@ -96,13 +124,16 @@ class TestPluginMetadata(unittest.TestCase):
     def test_not_dev_mode_when_source_is_github(self):
         """Should not be dev mode when source is github."""
         installed_plugins = {
-            "version": 1,
+            "version": 2,
             "plugins": {
-                "test-plugin@test-marketplace": {
-                    "version": "1.0.0",
-                    "gitCommitSha": "abc123",
-                    "installPath": "/path/to/plugin"
-                }
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 
@@ -127,13 +158,16 @@ class TestPluginMetadata(unittest.TestCase):
     def test_runs_git_in_dev_mode(self):
         """Should run git rev-parse HEAD in dev mode."""
         installed_plugins = {
-            "version": 1,
+            "version": 2,
             "plugins": {
-                "test-plugin@test-marketplace": {
-                    "version": "1.0.0",
-                    "gitCommitSha": "abc123",
-                    "installPath": "/path/to/plugin"
-                }
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 
@@ -167,13 +201,16 @@ class TestPluginMetadata(unittest.TestCase):
     def test_sets_needs_warning_when_shas_differ(self):
         """Should set needs_warning=True when installed_sha != current_sha."""
         installed_plugins = {
-            "version": 1,
+            "version": 2,
             "plugins": {
-                "test-plugin@test-marketplace": {
-                    "version": "1.0.0",
-                    "gitCommitSha": "abc123",
-                    "installPath": "/path/to/plugin"
-                }
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 
@@ -200,13 +237,16 @@ class TestPluginMetadata(unittest.TestCase):
     def test_does_not_run_git_when_not_dev_mode(self):
         """Should not run git when not in dev mode."""
         installed_plugins = {
-            "version": 1,
+            "version": 2,
             "plugins": {
-                "test-plugin@test-marketplace": {
-                    "version": "1.0.0",
-                    "gitCommitSha": "abc123",
-                    "installPath": "/path/to/plugin"
-                }
+                "test-plugin@test-marketplace": [
+                    {
+                        "scope": "user",
+                        "version": "1.0.0",
+                        "gitCommitSha": "abc123",
+                        "installPath": "/path/to/plugin"
+                    }
+                ]
             }
         }
 

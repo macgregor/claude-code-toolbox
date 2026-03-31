@@ -40,7 +40,14 @@ class PluginMetadata:
             installed_path = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
             if installed_path.exists():
                 data = json.loads(installed_path.read_text())
-                plugin = data.get("plugins", {}).get(self.plugin_id, {})
+                entries = data.get("plugins", {}).get(self.plugin_id)
+                # v2 format: plugins are arrays of install records
+                if isinstance(entries, list) and entries:
+                    plugin = entries[0]
+                elif isinstance(entries, dict):
+                    plugin = entries
+                else:
+                    plugin = None
                 if plugin:
                     self.version = plugin.get("version", "unknown")
                     self.installed_sha = plugin.get("gitCommitSha", "unknown")
